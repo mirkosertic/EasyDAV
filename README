@@ -1,1 +1,1 @@
-This file was created by IntelliJ IDEA 12.1.6 for binding GitHub repository
+This is a small library to mount different resources to a virtual filesystem and expose this filesystem using WebDAV.
