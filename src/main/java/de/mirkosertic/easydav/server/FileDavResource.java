@@ -4,32 +4,14 @@ import de.mirkosertic.easydav.fs.FSFile;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.jackrabbit.server.io.IOUtil;
-import org.apache.jackrabbit.webdav.DavCompliance;
-import org.apache.jackrabbit.webdav.DavException;
-import org.apache.jackrabbit.webdav.DavResource;
-import org.apache.jackrabbit.webdav.DavResourceFactory;
-import org.apache.jackrabbit.webdav.DavResourceIterator;
-import org.apache.jackrabbit.webdav.DavResourceLocator;
-import org.apache.jackrabbit.webdav.DavServletResponse;
-import org.apache.jackrabbit.webdav.DavSession;
-import org.apache.jackrabbit.webdav.MultiStatusResponse;
+import org.apache.jackrabbit.webdav.*;
 import org.apache.jackrabbit.webdav.io.InputContext;
 import org.apache.jackrabbit.webdav.io.OutputContext;
-import org.apache.jackrabbit.webdav.lock.ActiveLock;
-import org.apache.jackrabbit.webdav.lock.LockInfo;
-import org.apache.jackrabbit.webdav.lock.LockManager;
-import org.apache.jackrabbit.webdav.lock.Scope;
-import org.apache.jackrabbit.webdav.lock.Type;
-import org.apache.jackrabbit.webdav.property.DavProperty;
-import org.apache.jackrabbit.webdav.property.DavPropertyName;
-import org.apache.jackrabbit.webdav.property.DavPropertySet;
-import org.apache.jackrabbit.webdav.property.DefaultDavProperty;
-import org.apache.jackrabbit.webdav.property.PropEntry;
-import org.apache.jackrabbit.webdav.property.ResourceType;
+import org.apache.jackrabbit.webdav.lock.*;
+import org.apache.jackrabbit.webdav.property.*;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
 
@@ -59,7 +41,7 @@ public class FileDavResource implements DavResource {
         file.mkdirs();
     }
 
-    OutputStream openStream() throws FileNotFoundException {
+    OutputStream openStream() throws IOException {
         return file.openWriteStream();
     }
 
@@ -243,7 +225,7 @@ public class FileDavResource implements DavResource {
         aOutputContext.setModificationTime(file.lastModified());
         // Just copy the file in case there is an output context...
         if (aOutputContext.hasStream()) {
-            try (FileInputStream theFis = file.openInputStream()) {
+            try (InputStream theFis = file.openInputStream()) {
                 IOUtils.copyLarge(theFis, aOutputContext.getOutputStream());
             }
         }

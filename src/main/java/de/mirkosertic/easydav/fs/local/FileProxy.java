@@ -4,12 +4,7 @@ import de.mirkosertic.easydav.fs.FSFile;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.NotImplementedException;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -59,7 +54,7 @@ public class FileProxy implements FSFile {
     }
 
     @Override
-    public OutputStream openWriteStream() throws FileNotFoundException {
+    public OutputStream openWriteStream() throws IOException {
         return new FileOutputStream(file);
     }
 
@@ -82,7 +77,7 @@ public class FileProxy implements FSFile {
     }
 
     @Override
-    public FileInputStream openInputStream() throws FileNotFoundException {
+    public InputStream openInputStream() throws IOException {
         return new FileInputStream(file);
     }
 

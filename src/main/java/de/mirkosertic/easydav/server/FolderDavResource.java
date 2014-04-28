@@ -2,6 +2,7 @@ package de.mirkosertic.easydav.server;
 
 import de.mirkosertic.easydav.fs.FSFile;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.jackrabbit.server.io.IOUtil;
 import org.apache.jackrabbit.webdav.DavException;
 import org.apache.jackrabbit.webdav.DavResource;
@@ -64,6 +65,11 @@ public class FolderDavResource extends FileDavResource {
         return new DavResourceIterator() {
 
             int position = 0;
+
+            @Override
+            public void remove() {
+                throw new NotImplementedException("Not implemented");
+            }
 
             @Override
             public DavResource nextResource() {

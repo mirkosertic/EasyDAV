@@ -2,9 +2,8 @@ package de.mirkosertic.easydav.fs;
 
 import org.apache.commons.lang3.NotImplementedException;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,7 +49,7 @@ class NotExistingFile implements FSFile {
     }
 
     @Override
-    public OutputStream openWriteStream() throws FileNotFoundException {
+    public OutputStream openWriteStream() throws IOException {
         throw new NotImplementedException("Not implemented");
     }
 
@@ -70,7 +69,7 @@ class NotExistingFile implements FSFile {
     }
 
     @Override
-    public FileInputStream openInputStream() throws FileNotFoundException {
+    public InputStream openInputStream() throws IOException {
         throw new NotImplementedException("Not implemented");
     }
 

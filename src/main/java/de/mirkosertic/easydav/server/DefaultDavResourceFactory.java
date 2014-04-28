@@ -32,6 +32,9 @@ class DefaultDavResourceFactory implements DavResourceFactory {
             theResourcePath = theResourcePath.substring(1);
         }
         FSFile theReference = rootFile.asChild(theResourcePath);
+        if (theReference == null) {
+            throw new DavException(DavServletResponse.SC_NOT_FOUND, "Not found : "+theResourcePath);
+        }
 
         return resourceFactory.createFileOrFolderResource(theReference, aRequest.getDavSession(), this, aLocator);
     }

@@ -1,9 +1,6 @@
 package de.mirkosertic.easydav.fs;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.util.List;
 
 public interface FSFile {
@@ -24,13 +21,13 @@ public interface FSFile {
 
     boolean renameTo(FSFile aNewFileName);
 
-    OutputStream openWriteStream() throws FileNotFoundException;
+    OutputStream openWriteStream() throws IOException;
 
-    FileInputStream openInputStream() throws FileNotFoundException;
+    InputStream openInputStream() throws IOException;
 
     List<FSFile> listFiles();
 
-    FSFile asChild(String theResourcePath);
+    FSFile asChild(String aResourcePath);
 
     FSFile parent();
 
