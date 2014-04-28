@@ -1,19 +1,16 @@
 package de.mirkosertic.easydav.server;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.List;
-
+import de.mirkosertic.easydav.fs.FSFile;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.NotImplementedException;
+import org.apache.jackrabbit.server.io.IOUtil;
 import org.apache.jackrabbit.webdav.DavCompliance;
 import org.apache.jackrabbit.webdav.DavException;
 import org.apache.jackrabbit.webdav.DavResource;
 import org.apache.jackrabbit.webdav.DavResourceFactory;
 import org.apache.jackrabbit.webdav.DavResourceIterator;
 import org.apache.jackrabbit.webdav.DavResourceLocator;
+import org.apache.jackrabbit.webdav.DavServletResponse;
 import org.apache.jackrabbit.webdav.DavSession;
 import org.apache.jackrabbit.webdav.MultiStatusResponse;
 import org.apache.jackrabbit.webdav.io.InputContext;
@@ -30,16 +27,26 @@ import org.apache.jackrabbit.webdav.property.DefaultDavProperty;
 import org.apache.jackrabbit.webdav.property.PropEntry;
 import org.apache.jackrabbit.webdav.property.ResourceType;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.List;
+
 public class FileDavResource implements DavResource {
 
-    protected File file;
-    protected DavResourceFactory resourceFactory;
-    protected DavResourceLocator resourceLocator;
-    protected DavSession session;
-    protected ResourceFactory resFactory;
+    private static final String LOCKTOKEN = "LOCKTOKEN";
+
+    FSFile file;
+    DavResourceFactory resourceFactory;
+    DavResourceLocator resourceLocator;
+    DavSession session;
+    ResourceFactory resFactory;
+    private LockManager lockManager;
     private DavPropertySet properties;
 
-    FileDavResource(ResourceFactory aResFactory, File aFile, DavSession aSession, DavResourceFactory aResourceFactory, DavResourceLocator aResourceLocator) {
+    FileDavResource(ResourceFactory aResFactory, FSFile aFile, DavSession aSession, DavResourceFactory aResourceFactory,
+            DavResourceLocator aResourceLocator) {
         file = aFile;
         resourceFactory = aResourceFactory;
         resourceLocator = aResourceLocator;
@@ -48,9 +55,17 @@ public class FileDavResource implements DavResource {
         resFactory = aResFactory;
     }
 
+    void createNewEmptyCollection() {
+        file.mkdirs();
+    }
+
+    OutputStream openStream() throws FileNotFoundException {
+        return file.openWriteStream();
+    }
+
     @Override
     public String getComplianceClass() {
-        return DavCompliance.concatComplianceClasses(new String[] { DavCompliance._1_, DavCompliance._2_});
+        return DavCompliance.concatComplianceClasses(new String[] { DavCompliance._1_, DavCompliance._2_ });
     }
 
     @Override
@@ -65,7 +80,7 @@ public class FileDavResource implements DavResource {
 
     @Override
     public String getDisplayName() {
-        return file.toString();
+        return file.getName();
     }
 
     @Override
@@ -76,17 +91,22 @@ public class FileDavResource implements DavResource {
     @Override
     public String getResourcePath() {
         if (resourceLocator.isRootLocation()) {
-            return "/"+file.getName();
+            return "/" + file.getName();
         }
-        return resourceLocator.getResourcePath() + file.getName();
+        String theResourcePath = resourceLocator.getResourcePath();
+        if (!theResourcePath.endsWith("/")) {
+            return theResourcePath + "/" + file.getName();
+        }
+        return theResourcePath + '/' + file.getName();
     }
 
     @Override
     public String getHref() {
-        if (resourceLocator.isRootLocation()) {
-            return "/"+file.getName();
+        String theHRef = resourceLocator.getHref(false);
+        if (!theHRef.endsWith("/")) {
+            return theHRef + "/" + file.getName();
         }
-        return resourceLocator.getResourcePath() + file.getName();
+        return theHRef + file.getName();
     }
 
     @Override
@@ -121,12 +141,39 @@ public class FileDavResource implements DavResource {
 
     @Override
     public MultiStatusResponse alterProperties(List<? extends PropEntry> aChangeList) throws DavException {
-        throw new NotImplementedException("Not implemented");
+        if (!exists()) {
+            throw new DavException(DavServletResponse.SC_NOT_FOUND);
+        }
+        MultiStatusResponse theResponse = new MultiStatusResponse(getHref(), null);
+        /*
+         * loop over list of properties/names that were successfully altered
+         * and them to the multistatus response respecting the result of the
+         * complete action. in case of failure set the status to 'failed-dependency'
+         * in order to indicate, that altering those names/properties would
+         * have succeeded, if no other error occured.
+         */
+        for (PropEntry propEntry : aChangeList) {
+            int statusCode = DavServletResponse.SC_OK;
+
+            if (propEntry instanceof DavProperty) {
+                theResponse.add(((DavProperty<?>) propEntry).getName(), statusCode);
+            } else {
+                theResponse.add((DavPropertyName) propEntry, statusCode);
+            }
+        }
+        return theResponse;
     }
 
     @Override
     public void move(DavResource aDestination) throws DavException {
-        throw new NotImplementedException("Not implemented");
+        if (!exists()) {
+            throw new DavException(DavServletResponse.SC_NOT_FOUND);
+        }
+
+        FileDavResource theFileResource = (FileDavResource) aDestination;
+        if (!file.renameTo(theFileResource.file)) {
+            throw new DavException(DavServletResponse.SC_FORBIDDEN);
+        }
     }
 
     @Override
@@ -136,42 +183,43 @@ public class FileDavResource implements DavResource {
 
     @Override
     public boolean isLockable(Type aLockType, Scope aScope) {
-        return false;  // To change body of implemented methods use File | Settings | File Templates.
+        return true;
     }
 
     @Override
     public boolean hasLock(Type aLockType, Scope aScope) {
-        return false;  // To change body of implemented methods use File | Settings | File Templates.
+        return lockManager.hasLock(LOCKTOKEN, this);
     }
 
     @Override
     public ActiveLock getLock(Type aLockType, Scope aScope) {
-        return null;  // To change body of implemented methods use File | Settings | File Templates.
+        return lockManager.getLock(aLockType, aScope, this);
     }
 
     @Override
     public ActiveLock[] getLocks() {
-        return new ActiveLock[0];  // To change body of implemented methods use File | Settings | File Templates.
+        ActiveLock theWriteLock = getLock(Type.WRITE, Scope.EXCLUSIVE);
+        return (theWriteLock != null) ? new ActiveLock[] { theWriteLock } : new ActiveLock[0];
     }
 
     @Override
-    public ActiveLock lock(LockInfo reqLockInfo) throws DavException {
-        return null;  // To change body of implemented methods use File | Settings | File Templates.
+    public ActiveLock lock(LockInfo aLockInfo) throws DavException {
+        return lockManager.createLock(aLockInfo, this);
     }
 
     @Override
-    public ActiveLock refreshLock(LockInfo reqLockInfo, String lockToken) throws DavException {
-        return null;  // To change body of implemented methods use File | Settings | File Templates.
+    public ActiveLock refreshLock(LockInfo aLockInfo, String aLockToken) throws DavException {
+        return lockManager.refreshLock(aLockInfo, aLockToken, this);
     }
 
     @Override
     public void unlock(String aLockToken) throws DavException {
-        // To change body of implemented methods use File | Settings | File Templates.
+        lockManager.releaseLock(aLockToken, this);
     }
 
     @Override
-    public void addLockManager(LockManager lockmgr) {
-        // To change body of implemented methods use File | Settings | File Templates.
+    public void addLockManager(LockManager aLockManager) {
+        lockManager = aLockManager;
     }
 
     @Override
@@ -195,7 +243,7 @@ public class FileDavResource implements DavResource {
         aOutputContext.setModificationTime(file.lastModified());
         // Just copy the file in case there is an output context...
         if (aOutputContext.hasStream()) {
-            try(FileInputStream theFis = new FileInputStream(file)) {
+            try (FileInputStream theFis = file.openInputStream()) {
                 IOUtils.copyLarge(theFis, aOutputContext.getOutputStream());
             }
         }
@@ -203,11 +251,11 @@ public class FileDavResource implements DavResource {
 
     @Override
     public DavResource getCollection() {
-        return resFactory.createFileOrFolderResource(file.getParentFile(), session, resourceFactory, resourceLocator);
+        return resFactory.createFileOrFolderResource(file.parent(), session, resourceFactory, resourceLocator);
     }
 
     @Override
-    public void addMember(DavResource resource, InputContext inputContext) throws DavException {
+    public void addMember(DavResource aDavResource, InputContext aInputContext) throws DavException {
         throw new NotImplementedException("Not implemented");
     }
 
@@ -217,7 +265,7 @@ public class FileDavResource implements DavResource {
     }
 
     @Override
-    public void removeMember(DavResource member) throws DavException {
+    public void removeMember(DavResource aMember) throws DavException {
         throw new NotImplementedException("Not implemented");
     }
 
@@ -225,5 +273,13 @@ public class FileDavResource implements DavResource {
         properties.add(new DefaultDavProperty<>(DavPropertyName.DISPLAYNAME, getDisplayName()));
         properties.add(new ResourceType(ResourceType.DEFAULT_RESOURCE));
         properties.add(new DefaultDavProperty<>(DavPropertyName.ISCOLLECTION, "0"));
+
+        String theLastModified = IOUtil.getLastModified(getModificationTime());
+        properties.add(new DefaultDavProperty<>(DavPropertyName.GETLASTMODIFIED, theLastModified));
+
+        long theContentLength = file.length();
+        if (theContentLength > IOUtil.UNDEFINED_LENGTH) {
+            properties.add(new DefaultDavProperty<>(DavPropertyName.GETCONTENTLENGTH, theContentLength + ""));
+        }
     }
 }

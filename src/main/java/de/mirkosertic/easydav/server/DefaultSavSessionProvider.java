@@ -5,7 +5,7 @@ import org.apache.jackrabbit.webdav.DavSession;
 import org.apache.jackrabbit.webdav.DavSessionProvider;
 import org.apache.jackrabbit.webdav.WebdavRequest;
 
-public class DefaultSavSessionProvider implements DavSessionProvider {
+class DefaultSavSessionProvider implements DavSessionProvider {
 
     @Override
     public boolean attachSession(WebdavRequest aRequest) throws DavException {

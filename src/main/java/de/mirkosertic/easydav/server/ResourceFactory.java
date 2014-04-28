@@ -1,27 +1,36 @@
 package de.mirkosertic.easydav.server;
 
+import de.mirkosertic.easydav.fs.FSFile;
 import org.apache.jackrabbit.webdav.DavResource;
 import org.apache.jackrabbit.webdav.DavResourceFactory;
 import org.apache.jackrabbit.webdav.DavResourceLocator;
 import org.apache.jackrabbit.webdav.DavSession;
-
-import java.io.File;
+import org.apache.jackrabbit.webdav.lock.LockManager;
+import org.apache.jackrabbit.webdav.lock.SimpleLockManager;
 
 public class ResourceFactory {
 
-    public FileDavResource createFileResource(File aFile, DavSession aSession, DavResourceFactory aResourceFactory, DavResourceLocator aResourceLocator) {
+    private LockManager lockManager;
+
+    public ResourceFactory() {
+        lockManager = new SimpleLockManager();
+    }
+
+    FileDavResource createFileResource(FSFile aFile, DavSession aSession, DavResourceFactory aResourceFactory, DavResourceLocator aResourceLocator) {
         FileDavResource theResource = new FileDavResource(this, aFile, aSession, aResourceFactory, aResourceLocator);
+        theResource.addLockManager(lockManager);
         theResource.initProperties();
         return theResource;
     }
 
-    public FolderDavResource createFolderResource(File aFile, DavSession aSession, DavResourceFactory aResourceFactory, DavResourceLocator aResourceLocator) {
+    public FolderDavResource createFolderResource(FSFile aFile, DavSession aSession, DavResourceFactory aResourceFactory, DavResourceLocator aResourceLocator) {
         FolderDavResource theResource = new FolderDavResource(this, aFile, aSession, aResourceFactory, aResourceLocator);
+        theResource.addLockManager(lockManager);
         theResource.initProperties();
         return theResource;
     }
 
-    public DavResource createFileOrFolderResource(File aFile, DavSession aSession, DavResourceFactory aResourceFactory, DavResourceLocator aResourceLocator) {
+    public DavResource createFileOrFolderResource(FSFile aFile, DavSession aSession, DavResourceFactory aResourceFactory, DavResourceLocator aResourceLocator) {
         if (aFile.isDirectory()) {
             return createFolderResource(aFile, aSession, aResourceFactory, aResourceLocator);
         }

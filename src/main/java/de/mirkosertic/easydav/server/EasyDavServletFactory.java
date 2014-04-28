@@ -1,12 +1,14 @@
 package de.mirkosertic.easydav.server;
 
-public class EasyDavServletFactory {
+import de.mirkosertic.easydav.fs.VirtualFolder;
 
-    EasyDavServlet create() {
+class EasyDavServletFactory {
+
+    EasyDavServlet create(VirtualFolder aRootFileSystemFolder) {
         EasyDavServlet theServlet = new EasyDavServlet();
         theServlet.setDavSessionProvider(new DefaultSavSessionProvider());
         theServlet.setLocatorFactory(new DefaultDavLocatorFactory());
-        theServlet.setResourceFactory(new DefaultDavResourceFactory());
+        theServlet.setResourceFactory(new DefaultDavResourceFactory(aRootFileSystemFolder));
         return theServlet;
     }
 }

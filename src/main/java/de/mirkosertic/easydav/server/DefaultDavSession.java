@@ -6,7 +6,7 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.HashSet;
 import java.util.Set;
 
-public class DefaultDavSession implements DavSession {
+class DefaultDavSession implements DavSession {
 
     private Set<Object> references;
     private Set<String> lockTokens;
@@ -16,6 +16,10 @@ public class DefaultDavSession implements DavSession {
         references = new HashSet<>();
         lockTokens = new HashSet<>();
         servletRequest = aServletRequest;
+    }
+
+    public boolean isPutRequest() {
+        return "PUT".equals(servletRequest.getMethod());
     }
 
     @Override

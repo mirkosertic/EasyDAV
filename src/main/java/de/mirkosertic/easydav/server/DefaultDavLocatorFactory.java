@@ -2,7 +2,7 @@ package de.mirkosertic.easydav.server;
 
 import org.apache.jackrabbit.webdav.AbstractLocatorFactory;
 
-public class DefaultDavLocatorFactory extends AbstractLocatorFactory {
+class DefaultDavLocatorFactory extends AbstractLocatorFactory {
 
     DefaultDavLocatorFactory() {
         super("");
