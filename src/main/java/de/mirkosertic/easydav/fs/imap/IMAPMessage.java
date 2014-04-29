@@ -37,7 +37,7 @@ public class IMAPMessage implements FSFile {
                 theResult.append(" ");
                 theResult.append(theSubject);
             }
-            theResult.append(".msg");
+            theResult.append(".elm");
             return theResult.toString();
         } catch (MessagingException e) {
             throw new RuntimeException(e);
@@ -68,23 +68,8 @@ public class IMAPMessage implements FSFile {
     }
 
     @Override
-    public void delete() throws IOException {
-        throw new NotImplementedException("Not implemented");
-    }
-
-    @Override
     public boolean exists() {
         return true;
-    }
-
-    @Override
-    public boolean renameTo(FSFile aNewFileName) {
-        throw new NotImplementedException("Not implemented");
-    }
-
-    @Override
-    public OutputStream openWriteStream() throws IOException {
-        throw new NotImplementedException("Not implemented");
     }
 
     @Override

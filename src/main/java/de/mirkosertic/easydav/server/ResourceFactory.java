@@ -1,6 +1,5 @@
 package de.mirkosertic.easydav.server;
 
-import de.mirkosertic.easydav.fs.FSFile;
 import org.apache.jackrabbit.webdav.DavResource;
 import org.apache.jackrabbit.webdav.DavResourceFactory;
 import org.apache.jackrabbit.webdav.DavResourceLocator;
@@ -8,23 +7,28 @@ import org.apache.jackrabbit.webdav.DavSession;
 import org.apache.jackrabbit.webdav.lock.LockManager;
 import org.apache.jackrabbit.webdav.lock.SimpleLockManager;
 
-public class ResourceFactory {
+import de.mirkosertic.easydav.event.EventManager;
+import de.mirkosertic.easydav.fs.FSFile;
+
+class ResourceFactory {
 
     private LockManager lockManager;
+    private EventManager eventManager;
 
-    public ResourceFactory() {
-        lockManager = new SimpleLockManager();
+    public ResourceFactory(LockManager aLockManager, EventManager aEventManager) {
+        lockManager = aLockManager;
+        eventManager = aEventManager;
     }
 
     FileDavResource createFileResource(FSFile aFile, DavSession aSession, DavResourceFactory aResourceFactory, DavResourceLocator aResourceLocator) {
-        FileDavResource theResource = new FileDavResource(this, aFile, aSession, aResourceFactory, aResourceLocator);
+        FileDavResource theResource = new FileDavResource(this, aFile, aSession, aResourceFactory, aResourceLocator, eventManager);
         theResource.addLockManager(lockManager);
         theResource.initProperties();
         return theResource;
     }
 
     public FolderDavResource createFolderResource(FSFile aFile, DavSession aSession, DavResourceFactory aResourceFactory, DavResourceLocator aResourceLocator) {
-        FolderDavResource theResource = new FolderDavResource(this, aFile, aSession, aResourceFactory, aResourceLocator);
+        FolderDavResource theResource = new FolderDavResource(this, aFile, aSession, aResourceFactory, aResourceLocator, eventManager);
         theResource.addLockManager(lockManager);
         theResource.initProperties();
         return theResource;

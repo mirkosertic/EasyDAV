@@ -1,14 +1,17 @@
 package de.mirkosertic.easydav.server;
 
+import de.mirkosertic.easydav.event.EventManager;
 import de.mirkosertic.easydav.fs.VirtualFolder;
+import org.apache.jackrabbit.webdav.lock.SimpleLockManager;
 
 class EasyDavServletFactory {
 
-    EasyDavServlet create(VirtualFolder aRootFileSystemFolder) {
+    EasyDavServlet create(VirtualFolder aRootFileSystemFolder, EventManager aEventManager) {
         EasyDavServlet theServlet = new EasyDavServlet();
         theServlet.setDavSessionProvider(new DefaultSavSessionProvider());
         theServlet.setLocatorFactory(new DefaultDavLocatorFactory());
-        theServlet.setResourceFactory(new DefaultDavResourceFactory(aRootFileSystemFolder));
+        ResourceFactory theResourceFactory = new ResourceFactory(new SimpleLockManager(), aEventManager);
+        theServlet.setResourceFactory(new DefaultDavResourceFactory(aRootFileSystemFolder, theResourceFactory));
         return theServlet;
     }
 }

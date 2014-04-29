@@ -1,13 +1,12 @@
 package de.mirkosertic.easydav.fs;
 
-import org.apache.commons.lang3.NotImplementedException;
-
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import org.apache.commons.lang3.NotImplementedException;
 
 public class VirtualFolder implements FSFile {
 
@@ -47,7 +46,7 @@ public class VirtualFolder implements FSFile {
                 return theFile.asChild(aResourcePath.substring(p + 1));
             }
         }
-        throw new IllegalArgumentException("Cannot find child " + aResourcePath);
+        return null;
     }
 
     @Override
@@ -76,23 +75,8 @@ public class VirtualFolder implements FSFile {
     }
 
     @Override
-    public void delete() throws IOException {
-        throw new NotImplementedException("Cannot delete virtual folders");
-    }
-
-    @Override
-    public OutputStream openWriteStream() throws IOException {
-        throw new NotImplementedException("Cannot write to virtual folder");
-    }
-
-    @Override
     public boolean exists() {
         return true;
-    }
-
-    @Override
-    public boolean renameTo(FSFile aNewFileName) {
-        throw new NotImplementedException("Cannot rename virtual folders");
     }
 
     @Override

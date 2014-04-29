@@ -15,19 +15,31 @@ public interface FSFile {
 
     void mkdirs();
 
-    void delete() throws IOException;
-
     boolean exists();
-
-    boolean renameTo(FSFile aNewFileName);
-
-    OutputStream openWriteStream() throws IOException;
 
     InputStream openInputStream() throws IOException;
 
     List<FSFile> listFiles();
 
-    FSFile asChild(String aResourcePath);
+    default FSFile asChild(String aResourcePath) {
+        int p = aResourcePath.indexOf("/");
+        if (p < 0) {
+            for (FSFile theFile : listFiles()) {
+                if (theFile.getName().equals(aResourcePath)) {
+                    return theFile;
+                }
+            }
+            return null;
+        }
+        String thePrefix = aResourcePath.substring(0, p);
+        String theSuffix = aResourcePath.substring(p + 1);
+        for (FSFile theFile : listFiles()) {
+            if (theFile.getName().equals(thePrefix)) {
+                return theFile.asChild(theSuffix);
+            }
+        }
+        return null;
+    }
 
     FSFile parent();
 

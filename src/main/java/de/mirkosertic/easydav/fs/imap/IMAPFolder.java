@@ -1,17 +1,18 @@
 package de.mirkosertic.easydav.fs.imap;
 
-import de.mirkosertic.easydav.fs.FSFile;
-import org.apache.commons.lang3.NotImplementedException;
-import org.apache.commons.lang3.StringUtils;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.mail.Folder;
 import javax.mail.Message;
 import javax.mail.MessagingException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.List;
+
+import org.apache.commons.lang3.NotImplementedException;
+import org.apache.commons.lang3.StringUtils;
+
+import de.mirkosertic.easydav.fs.FSFile;
 
 public class IMAPFolder implements FSFile {
 
@@ -19,7 +20,7 @@ public class IMAPFolder implements FSFile {
     private Folder folder;
     private FSFile parent;
 
-    IMAPFolder(Folder aFolder) {
+    private IMAPFolder(Folder aFolder) {
         this(aFolder.getName(), aFolder);
     }
 
@@ -28,46 +29,42 @@ public class IMAPFolder implements FSFile {
         name = aName;
     }
 
+    @Override
     public boolean isDirectory() {
         return true;
     }
 
+    @Override
     public String getName() {
         return name;
     }
 
+    @Override
     public long lastModified() {
         return 0;
     }
 
+    @Override
     public long length() {
         return 0;
     }
 
+    @Override
     public void mkdirs() {
         throw new NotImplementedException("Not implemented");
     }
 
-    public void delete() throws IOException {
-        throw new NotImplementedException("Not implemented");
-    }
-
+    @Override
     public boolean exists() {
         return true;
     }
 
-    public boolean renameTo(FSFile aNewFileName) {
-        throw new NotImplementedException("Not implemented");
-    }
-
-    public OutputStream openWriteStream() throws IOException {
-        throw new NotImplementedException("Not implemented");
-    }
-
+    @Override
     public InputStream openInputStream() throws IOException {
         throw new NotImplementedException("Not implemented");
     }
 
+    @Override
     public List<FSFile> listFiles() {
         List<FSFile> theFiles = new ArrayList<>();
         try {
@@ -94,30 +91,12 @@ public class IMAPFolder implements FSFile {
         return theFiles;
     }
 
-    public FSFile asChild(String aResourcePath) {
-        int p = aResourcePath.indexOf("/");
-        if (p < 0) {
-            for (FSFile theFile : listFiles()) {
-                if (theFile.getName().equals(aResourcePath)) {
-                    return theFile;
-                }
-            }
-            return null;
-        }
-        String thePrefix = aResourcePath.substring(0, p);
-        String theSuffix = aResourcePath.substring(p + 1);
-        for (FSFile theFile : listFiles()) {
-            if (theFile.getName().equals(thePrefix)) {
-                return theFile.asChild(theSuffix);
-            }
-        }
-        return null;
-    }
-
+    @Override
     public FSFile parent() {
         return parent;
     }
 
+    @Override
     public void setParent(FSFile aParent) {
         parent = aParent;
     }

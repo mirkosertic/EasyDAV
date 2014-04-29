@@ -1,6 +1,9 @@
 package de.mirkosertic.easydav.server;
 
-import de.mirkosertic.easydav.fs.FSFile;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.List;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.jackrabbit.server.io.IOUtil;
@@ -17,15 +20,18 @@ import org.apache.jackrabbit.webdav.property.DavPropertyName;
 import org.apache.jackrabbit.webdav.property.DefaultDavProperty;
 import org.apache.jackrabbit.webdav.property.ResourceType;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.List;
+import de.mirkosertic.easydav.event.EventManager;
+import de.mirkosertic.easydav.fs.Deletable;
+import de.mirkosertic.easydav.fs.FSFile;
+import de.mirkosertic.easydav.fs.FileCreatedOrUpdatedEvent;
+import de.mirkosertic.easydav.fs.FileDeletedEvent;
+import de.mirkosertic.easydav.fs.FolderCreatedEvent;
 
 public class FolderDavResource extends FileDavResource {
 
     FolderDavResource(ResourceFactory aResFactory, FSFile aFile, DavSession aSession,
-            DavResourceFactory aResourceFactory, DavResourceLocator aResourceLocator) {
-        super(aResFactory, aFile, aSession, aResourceFactory, aResourceLocator);
+            DavResourceFactory aResourceFactory, DavResourceLocator aResourceLocator, EventManager aEventManager) {
+        super(aResFactory, aFile, aSession, aResourceFactory, aResourceLocator, aEventManager);
     }
 
     @Override
@@ -44,6 +50,7 @@ public class FolderDavResource extends FileDavResource {
                     // Normal file upload
                     IOUtils.copyLarge(aInputContext.getInputStream(), theStream);
                 }
+                eventManager.fire(new FileCreatedOrUpdatedEvent(theFileResource.file));
             } catch (Exception e) {
                 throw new DavException(DavServletResponse.SC_INTERNAL_SERVER_ERROR, e);
             }
@@ -51,6 +58,8 @@ public class FolderDavResource extends FileDavResource {
             // MKCols Request
             try {
                 theFileResource.createNewEmptyCollection();
+
+                eventManager.fire(new FolderCreatedEvent(theFileResource.file));
             } catch (Exception e) {
                 throw new DavException(DavServletResponse.SC_INTERNAL_SERVER_ERROR, e);
             }
@@ -105,8 +114,15 @@ public class FolderDavResource extends FileDavResource {
         }
 
         FileDavResource theFileResource = (FileDavResource) aMember;
+        if (!(file instanceof Deletable)) {
+            throw new DavException(DavServletResponse.SC_FORBIDDEN);
+        }
+
         try {
-            theFileResource.file.delete();
+            Deletable theDeletable = (Deletable) theFileResource.file;
+            theDeletable.delete();
+
+            eventManager.fire(new FileDeletedEvent(file));
         } catch (IOException e) {
             throw new DavException(DavServletResponse.SC_FORBIDDEN, e);
         }

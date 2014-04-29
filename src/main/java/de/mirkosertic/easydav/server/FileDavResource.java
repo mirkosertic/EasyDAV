@@ -1,6 +1,11 @@
 package de.mirkosertic.easydav.server;
 
+import de.mirkosertic.easydav.event.EventManager;
+import de.mirkosertic.easydav.fs.Deletable;
 import de.mirkosertic.easydav.fs.FSFile;
+import de.mirkosertic.easydav.fs.FileMovedEvent;
+import de.mirkosertic.easydav.fs.Renameable;
+import de.mirkosertic.easydav.fs.Writeable;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.jackrabbit.server.io.IOUtil;
@@ -15,7 +20,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
 
-public class FileDavResource implements DavResource {
+class FileDavResource implements DavResource {
 
     private static final String LOCKTOKEN = "LOCKTOKEN";
 
@@ -24,25 +29,32 @@ public class FileDavResource implements DavResource {
     DavResourceLocator resourceLocator;
     DavSession session;
     ResourceFactory resFactory;
+    EventManager eventManager;
+
     private LockManager lockManager;
     private DavPropertySet properties;
 
     FileDavResource(ResourceFactory aResFactory, FSFile aFile, DavSession aSession, DavResourceFactory aResourceFactory,
-            DavResourceLocator aResourceLocator) {
+            DavResourceLocator aResourceLocator, EventManager aEventManager) {
         file = aFile;
         resourceFactory = aResourceFactory;
         resourceLocator = aResourceLocator;
         session = aSession;
         properties = new DavPropertySet();
         resFactory = aResFactory;
+        eventManager = aEventManager;
     }
 
     void createNewEmptyCollection() {
         file.mkdirs();
     }
 
-    OutputStream openStream() throws IOException {
-        return file.openWriteStream();
+    OutputStream openStream() throws IOException, DavException {
+        if (!(file instanceof Writeable)) {
+            throw new DavException(DavServletResponse.SC_FORBIDDEN);
+        }
+        Writeable theWriteable = (Writeable) file;
+        return theWriteable.openWriteStream();
     }
 
     @Override
@@ -148,14 +160,21 @@ public class FileDavResource implements DavResource {
 
     @Override
     public void move(DavResource aDestination) throws DavException {
+        if (!(file instanceof Renameable)) {
+            throw new DavException(DavServletResponse.SC_FORBIDDEN);
+        }
         if (!exists()) {
             throw new DavException(DavServletResponse.SC_NOT_FOUND);
         }
 
         FileDavResource theFileResource = (FileDavResource) aDestination;
-        if (!file.renameTo(theFileResource.file)) {
+        Renameable theRenameable = (Renameable) file;
+
+        if (!theRenameable.renameTo(theFileResource.file)) {
             throw new DavException(DavServletResponse.SC_FORBIDDEN);
         }
+
+        eventManager.fire(new FileMovedEvent(file, theFileResource.file));
     }
 
     @Override
@@ -216,7 +235,20 @@ public class FileDavResource implements DavResource {
 
     @Override
     public String getSupportedMethods() {
-        return DavResource.METHODS;
+        StringBuilder theMethods = new StringBuilder("OPTIONS, GET, HEAD, TRACE, PROPFIND, PROPPATCH, COPY, LOCK, UNLOCK");
+        if (file instanceof Writeable) {
+            theMethods.append(", POST, PUT");
+        }
+        if (file instanceof Renameable) {
+            theMethods.append(", MOVE");
+        }
+        if (file instanceof Deletable) {
+            theMethods.append(", DELETE");
+        }
+        if (file.isDirectory()) {
+            theMethods.append(", MKCOL");
+        }
+        return theMethods.toString();
     }
 
     @Override

@@ -1,12 +1,11 @@
 package de.mirkosertic.easydav.fs;
 
-import org.apache.commons.lang3.NotImplementedException;
-
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.apache.commons.lang3.NotImplementedException;
 
 class NotExistingFile implements FSFile {
 
@@ -44,23 +43,8 @@ class NotExistingFile implements FSFile {
     }
 
     @Override
-    public void delete() throws IOException {
-        throw new NotImplementedException("Not implemented");
-    }
-
-    @Override
-    public OutputStream openWriteStream() throws IOException {
-        throw new NotImplementedException("Not implemented");
-    }
-
-    @Override
     public boolean exists() {
         return false;
-    }
-
-    @Override
-    public boolean renameTo(FSFile aNewFileName) {
-        throw new NotImplementedException("Not implemented");
     }
 
     @Override

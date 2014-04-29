@@ -1,7 +1,5 @@
 package de.mirkosertic.easydav.server;
 
-import de.mirkosertic.easydav.fs.FSFile;
-import de.mirkosertic.easydav.fs.VirtualFolder;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.jackrabbit.webdav.DavException;
 import org.apache.jackrabbit.webdav.DavResource;
@@ -11,14 +9,17 @@ import org.apache.jackrabbit.webdav.DavServletRequest;
 import org.apache.jackrabbit.webdav.DavServletResponse;
 import org.apache.jackrabbit.webdav.DavSession;
 
+import de.mirkosertic.easydav.fs.FSFile;
+import de.mirkosertic.easydav.fs.VirtualFolder;
+
 class DefaultDavResourceFactory implements DavResourceFactory {
 
     private VirtualFolder rootFile;
     private ResourceFactory resourceFactory;
 
-    public DefaultDavResourceFactory(VirtualFolder aRootFile) {
+    public DefaultDavResourceFactory(VirtualFolder aRootFile, ResourceFactory aResourceFactory) {
         rootFile = aRootFile;
-        resourceFactory = new ResourceFactory();
+        resourceFactory = aResourceFactory;
     }
 
     @Override

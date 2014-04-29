@@ -5,7 +5,7 @@ import javax.mail.Session;
 import javax.mail.Store;
 import java.util.Properties;
 
-public class IMAPConnectorFactory {
+class IMAPConnectorFactory {
 
     public IMAPConnector create(String aIMAPServer, String aUsername, String aPassword) throws MessagingException {
         Properties theProperties = new Properties();

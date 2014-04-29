@@ -1,6 +1,9 @@
 package de.mirkosertic.easydav.fs.local;
 
+import de.mirkosertic.easydav.fs.Deletable;
 import de.mirkosertic.easydav.fs.FSFile;
+import de.mirkosertic.easydav.fs.Renameable;
+import de.mirkosertic.easydav.fs.Writeable;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.NotImplementedException;
 
@@ -8,7 +11,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class FileProxy implements FSFile {
+public class FileProxy implements FSFile, Deletable, Renameable, Writeable {
 
     private String displayName;
     private File file;
