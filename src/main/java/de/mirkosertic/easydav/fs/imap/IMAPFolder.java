@@ -16,8 +16,8 @@ import de.mirkosertic.easydav.fs.FSFile;
 
 public class IMAPFolder implements FSFile {
 
-    private String name;
-    private Folder folder;
+    private final String name;
+    private final Folder folder;
     private FSFile parent;
 
     private IMAPFolder(Folder aFolder) {

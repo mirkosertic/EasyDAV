@@ -8,10 +8,10 @@ import org.apache.commons.io.IOUtils;
 
 public class Content {
 
-    private long fileSize;
-    private long lastModified;
-    private Map<String, String> metadata;
-    private String fileContent;
+    private final long fileSize;
+    private final long lastModified;
+    private final Map<String, String> metadata;
+    private final String fileContent;
 
     public Content(String aFileContent, long fileSize, long lastModified) {
         this.fileSize = fileSize;

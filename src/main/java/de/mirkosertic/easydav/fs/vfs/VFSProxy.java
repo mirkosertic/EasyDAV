@@ -15,9 +15,9 @@ public class VFSProxy implements FSFile {
 
     private final FileObject fileObject;
     private FSFile parent;
-    private String name;
+    private final String name;
 
-    public VFSProxy(FileObject aFileObject) {
+    private VFSProxy(FileObject aFileObject) {
         this(aFileObject, aFileObject.getName().getBaseName());
     }
 

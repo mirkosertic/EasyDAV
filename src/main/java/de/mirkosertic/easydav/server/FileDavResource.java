@@ -24,15 +24,15 @@ class FileDavResource implements DavResource {
 
     private static final String LOCKTOKEN = "LOCKTOKEN";
 
-    FSFile file;
-    DavResourceFactory resourceFactory;
-    DavResourceLocator resourceLocator;
-    DavSession session;
-    ResourceFactory resFactory;
-    EventManager eventManager;
+    final FSFile file;
+    final DavResourceFactory resourceFactory;
+    final DavResourceLocator resourceLocator;
+    final DavSession session;
+    final ResourceFactory resFactory;
+    final EventManager eventManager;
 
     private LockManager lockManager;
-    private DavPropertySet properties;
+    private final DavPropertySet properties;
 
     FileDavResource(ResourceFactory aResFactory, FSFile aFile, DavSession aSession, DavResourceFactory aResourceFactory,
             DavResourceLocator aResourceLocator, EventManager aEventManager) {

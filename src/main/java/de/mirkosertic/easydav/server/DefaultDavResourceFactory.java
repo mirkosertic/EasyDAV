@@ -14,8 +14,8 @@ import de.mirkosertic.easydav.fs.VirtualFolder;
 
 class DefaultDavResourceFactory implements DavResourceFactory {
 
-    private VirtualFolder rootFile;
-    private ResourceFactory resourceFactory;
+    private final VirtualFolder rootFile;
+    private final ResourceFactory resourceFactory;
 
     public DefaultDavResourceFactory(VirtualFolder aRootFile, ResourceFactory aResourceFactory) {
         rootFile = aRootFile;

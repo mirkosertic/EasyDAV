@@ -1,6 +1,6 @@
 package de.mirkosertic.easydav.index;
 
-public interface IndexFields {
+interface IndexFields {
 
     String FILENAME = "EasyDAV.filename";
     String EXTENSION = "extension";

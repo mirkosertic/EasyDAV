@@ -8,9 +8,9 @@ import java.util.Set;
 
 class DefaultDavSession implements DavSession {
 
-    private Set<Object> references;
-    private Set<String> lockTokens;
-    private HttpServletRequest servletRequest;
+    private final Set<Object> references;
+    private final Set<String> lockTokens;
+    private final HttpServletRequest servletRequest;
 
     DefaultDavSession(HttpServletRequest aServletRequest) {
         references = new HashSet<>();

@@ -10,9 +10,9 @@ import org.apache.commons.lang3.NotImplementedException;
 
 public class VirtualFolder implements FSFile {
 
-    private String name;
+    private final String name;
     private FSFile parent;
-    private List<FSFile> files;
+    private final List<FSFile> files;
 
     public VirtualFolder(String aName) {
         name = aName;

@@ -13,8 +13,8 @@ import java.util.List;
 
 public class FileProxy implements FSFile, Deletable, Renameable, Writeable {
 
-    private String displayName;
-    private File file;
+    private final String displayName;
+    private final File file;
     private FSFile parent;
 
     private FileProxy(File aFile) {

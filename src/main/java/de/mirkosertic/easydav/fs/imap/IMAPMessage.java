@@ -14,7 +14,7 @@ import java.util.List;
 
 public class IMAPMessage implements FSFile {
 
-    private Message message;
+    private final Message message;
     private FSFile parent;
 
     IMAPMessage(Message aMessage) {

@@ -9,7 +9,7 @@ import org.apache.commons.lang3.NotImplementedException;
 
 class NotExistingFile implements FSFile {
 
-    private String name;
+    private final String name;
     private FSFile parent;
 
     NotExistingFile(String aName, FSFile aParent) {

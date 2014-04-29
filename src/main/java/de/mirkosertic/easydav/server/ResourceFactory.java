@@ -12,8 +12,8 @@ import de.mirkosertic.easydav.fs.FSFile;
 
 class ResourceFactory {
 
-    private LockManager lockManager;
-    private EventManager eventManager;
+    private final LockManager lockManager;
+    private final EventManager eventManager;
 
     public ResourceFactory(LockManager aLockManager, EventManager aEventManager) {
         lockManager = aLockManager;

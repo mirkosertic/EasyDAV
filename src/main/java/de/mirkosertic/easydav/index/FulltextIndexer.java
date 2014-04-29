@@ -223,7 +223,7 @@ public class FulltextIndexer implements EventListener {
         indexWriter.updateDocument(new Term(IndexFields.FILENAME, aLocationId), theDocument);
     }
 
-    public UpdateCheckResult checkIfModified(String aLocationId, long aLastModified) throws IOException {
+    UpdateCheckResult checkIfModified(String aLocationId, long aLastModified) throws IOException {
 
         IndexSearcher theSearcher = searcherManager.acquire();
         try {
