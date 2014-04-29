@@ -2,11 +2,18 @@ package de.mirkosertic.easydav.index;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
@@ -17,6 +24,7 @@ import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.index.Term;
+import org.apache.lucene.queries.mlt.MoreLikeThis;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
@@ -25,6 +33,9 @@ import org.apache.lucene.search.SearcherManager;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.search.WildcardQuery;
+import org.apache.lucene.search.highlight.Highlighter;
+import org.apache.lucene.search.highlight.QueryScorer;
+import org.apache.lucene.search.highlight.SimpleHTMLFormatter;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
 import org.slf4j.LoggerFactory;
@@ -41,6 +52,7 @@ public class FulltextIndexer implements EventListener {
 
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(ContentExtractor.class);
     private static final Version LUCENE_VERSION = Version.LUCENE_48;
+    private static final int NUMBER_OF_FRAGMENTS = 5;
 
     private static enum UpdateCheckResult {
         UPDATED, UNMODIFIED
@@ -244,6 +256,86 @@ public class FulltextIndexer implements EventListener {
                 return UpdateCheckResult.UPDATED;
             }
             return UpdateCheckResult.UNMODIFIED;
+        } finally {
+            searcherManager.release(theSearcher);
+        }
+    }
+
+    public QueryResult performQuery(String aSearchString) throws IOException {
+        return performQuery(aSearchString, true, 100);
+    }
+
+    public QueryResult performQuery(String aQueryString, boolean aIncludeSimilarDocuments, int aMaxDocs) throws IOException {
+
+        searcherManager.maybeRefreshBlocking();
+        IndexSearcher theSearcher = searcherManager.acquire();
+
+        List<QueryResultDocument> theResultDocuments = new ArrayList<>();
+
+        long theStartTime = System.currentTimeMillis();
+
+        DateFormat theDateFormat = new SimpleDateFormat("dd.MMMM.yyyy", Locale.ENGLISH);
+
+        try {
+            // Search only if a search query is given
+            if (!StringUtils.isEmpty(aQueryString)) {
+
+                QueryParser theParser = new QueryParser();
+
+                Query theQuery = theParser.parse(aQueryString, IndexFields.CONTENT);
+
+                MoreLikeThis theMoreLikeThis = new MoreLikeThis(theSearcher.getIndexReader());
+                theMoreLikeThis.setAnalyzer(analyzer);
+                theMoreLikeThis.setMinTermFreq(1);
+                theMoreLikeThis.setMinDocFreq(1);
+                theMoreLikeThis.setFieldNames(new String[]{IndexFields.CONTENT});
+
+                TopDocs theDocs = theSearcher.search(theQuery, null, aMaxDocs);
+
+                for (int i=0;i<theDocs.scoreDocs.length;i++) {
+                    ScoreDoc theScoreDoc = theDocs.scoreDocs[i];
+                    Document theDocument = theSearcher.doc(theScoreDoc.doc);
+
+                    String theFoundFileName = theDocument.getField(IndexFields.FILENAME).stringValue();
+                    Date theLastModified = new Date(Long.parseLong(theDocument.getField(IndexFields.LASTMODIFIED).stringValue()));
+
+                    String theOriginalContent = theDocument.getField(IndexFields.CONTENT).stringValue();
+
+                    StringBuilder theHighlightedResult = new StringBuilder(theDateFormat.format(theLastModified));
+                    theHighlightedResult.append("&nbsp;-&nbsp;");
+                    Highlighter theHighlighter = new Highlighter(new SimpleHTMLFormatter(), new QueryScorer(theQuery));
+                    for (String theFragment : theHighlighter.getBestFragments(analyzer, IndexFields.CONTENT, theOriginalContent, NUMBER_OF_FRAGMENTS)) {
+                        if (theHighlightedResult.length() > 0) {
+                            theHighlightedResult = theHighlightedResult.append("...");
+                        }
+                        theHighlightedResult = theHighlightedResult.append(theFragment);
+                    }
+
+                    List<String> theSimilarFiles = new ArrayList<>();
+
+                    if (aIncludeSimilarDocuments) {
+
+                        Query theMoreLikeThisQuery = theMoreLikeThis.like(theDocs.scoreDocs[i].doc);
+                        TopDocs theMoreLikeThisTopDocs = theSearcher.search(theMoreLikeThisQuery, 5);
+                        for (ScoreDoc theMoreLikeThisScoreDoc : theMoreLikeThisTopDocs.scoreDocs) {
+                            Document theMoreLikeThisDocument = theSearcher.doc(theMoreLikeThisScoreDoc.doc);
+
+                            String theFilename = theMoreLikeThisDocument.getField(IndexFields.FILENAME).stringValue();
+                            if (!theFoundFileName.equals(theFilename)) {
+                                if (!theSimilarFiles.contains(theFilename)) {
+                                    theSimilarFiles.add(theFilename);
+                                }
+                            }
+                        }
+                    }
+
+                    theResultDocuments.add(new QueryResultDocument(theFoundFileName, theHighlightedResult.toString(), Long.parseLong(theDocument.getField(IndexFields.LASTMODIFIED).stringValue()), theSimilarFiles));
+                }
+            }
+
+            return new QueryResult(System.currentTimeMillis() - theStartTime, theResultDocuments, theSearcher.getIndexReader().numDocs());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         } finally {
             searcherManager.release(theSearcher);
         }
