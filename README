@@ -1,4 +1,1 @@
-This is a small library to mount different resources to a virtual filesystem and expose this filesystem using WebDAV.
-It also provides a web based fulltext search for the exposed content in google style and also has support for different
-filesystems using an abstraction layer. Currently supported filesystems als local files, network shares, all supported
-filesystems with Apache VFS2 providers(in read-only mode) and also IMAP based mail providers as well.
+This is a small library to mount different resources to a virtual filesystem and expose this filesystem using WebDAV. It also provides a web based fulltext search for the exposed content in google style and also has support for different filesystems using an abstraction layer. Currently supported filesystems als local files, network shares, all supported filesystems with Apache VFS2 providers(in read-only mode) and also IMAP based mail providers as well.
