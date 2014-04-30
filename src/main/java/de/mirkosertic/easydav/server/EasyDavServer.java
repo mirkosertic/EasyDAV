@@ -2,9 +2,11 @@ package de.mirkosertic.easydav.server;
 
 import java.io.File;
 
+import de.mirkosertic.easydav.fs.RootVirtualFolder;
 import de.mirkosertic.easydav.fs.vfs.VFSProxy;
 import de.mirkosertic.easydav.index.ContentExtractor;
 import de.mirkosertic.easydav.index.FulltextIndexer;
+import de.mirkosertic.easydav.script.ScriptManager;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemManager;
 import org.apache.commons.vfs2.VFS;
@@ -28,7 +30,10 @@ public class EasyDavServer {
         FulltextIndexer theIndexer = new FulltextIndexer(new File("C:\\Temp2"), theContentExtractor);
         theEventManager.register(theIndexer);
 
-        VirtualFolder theRoot = new VirtualFolder("Root");
+        ScriptManager theScriptManager = new ScriptManager();
+        theEventManager.register(theScriptManager);
+
+        RootVirtualFolder theRoot = new RootVirtualFolder();
 
         FileProxy theTempFiles = new FileProxy(new File("c:\\Temp"), "Temporary Files");
         FileProxy theNetworkData = new FileProxy(new File("U:\\"), "My network share");

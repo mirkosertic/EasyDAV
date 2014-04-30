@@ -156,7 +156,7 @@ public class FulltextIndexer implements EventListener {
     private void processFileFound(FSFile aFile) {
         // This is called by the crawler
         if (!aFile.isDirectory()) {
-            String theFileLocationID = toLocationID(aFile);
+            String theFileLocationID = aFile.toLocationID();
             try {
                 UpdateCheckResult theResult = checkIfModified(theFileLocationID, aFile.lastModified());
                 if (theResult == UpdateCheckResult.UPDATED) {
@@ -169,7 +169,7 @@ public class FulltextIndexer implements EventListener {
     }
 
     private void processFileDeleted(FSFile aFile) {
-        String theFileLocationID = toLocationID(aFile);
+        String theFileLocationID = aFile.toLocationID();
         try {
             if (aFile.isDirectory()) {
                 indexWriter
@@ -193,7 +193,7 @@ public class FulltextIndexer implements EventListener {
     private void processFileCreatedOrUpdated(FSFile aFile) {
         // this is invoked during file manipulation
         if (contentExtractor.supportsFile(aFile)) {
-            String theFileLocationID = toLocationID(aFile);
+            String theFileLocationID = aFile.toLocationID();
 
             processFileDeleted(aFile);
             Content theContent = contentExtractor.extractContentFrom(aFile);
@@ -209,13 +209,6 @@ public class FulltextIndexer implements EventListener {
                 LOGGER.warn("No content extracted for {}", theFileLocationID);
             }
         }
-    }
-
-    private String toLocationID(FSFile aFile) {
-        if (aFile.parent() != null) {
-            return toLocationID(aFile.parent()) + "/" + aFile.getName();
-        }
-        return aFile.getName();
     }
 
     private void addToIndex(String aLocationId, Content aContent) throws IOException {
