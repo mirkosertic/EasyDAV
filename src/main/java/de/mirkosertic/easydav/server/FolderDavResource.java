@@ -50,7 +50,7 @@ public class FolderDavResource extends FileDavResource {
                     // Normal file upload
                     IOUtils.copyLarge(aInputContext.getInputStream(), theStream);
                 }
-                eventManager.fire(new FileCreatedOrUpdatedEvent(theFileResource.file));
+                eventManager.fire(new FileCreatedOrUpdatedEvent(currentUserID(), theFileResource.file));
             } catch (Exception e) {
                 throw new DavException(DavServletResponse.SC_INTERNAL_SERVER_ERROR, e);
             }
@@ -59,7 +59,7 @@ public class FolderDavResource extends FileDavResource {
             try {
                 theFileResource.createNewEmptyCollection();
 
-                eventManager.fire(new FolderCreatedEvent(theFileResource.file));
+                eventManager.fire(new FolderCreatedEvent(currentUserID(), theFileResource.file));
             } catch (Exception e) {
                 throw new DavException(DavServletResponse.SC_INTERNAL_SERVER_ERROR, e);
             }
@@ -122,7 +122,7 @@ public class FolderDavResource extends FileDavResource {
             Deletable theDeletable = (Deletable) theFileResource.file;
             theDeletable.delete();
 
-            eventManager.fire(new FileDeletedEvent(file));
+            eventManager.fire(new FileDeletedEvent(currentUserID(), file));
         } catch (IOException e) {
             throw new DavException(DavServletResponse.SC_FORBIDDEN, e);
         }

@@ -14,25 +14,29 @@ import de.mirkosertic.easydav.fs.VirtualFolder;
 
 class DefaultDavResourceFactory implements DavResourceFactory {
 
-    private final VirtualFolder rootFile;
+    private final ConfigurationManager configurationManager;
     private final ResourceFactory resourceFactory;
 
-    public DefaultDavResourceFactory(VirtualFolder aRootFile, ResourceFactory aResourceFactory) {
-        rootFile = aRootFile;
+    public DefaultDavResourceFactory(ConfigurationManager aConfigManager, ResourceFactory aResourceFactory) {
         resourceFactory = aResourceFactory;
+        configurationManager = aConfigManager;
     }
 
     @Override
     public DavResource createResource(DavResourceLocator aLocator, DavServletRequest aRequest, DavServletResponse aResponse) throws DavException {
+
+        Configuration theConfiguration = configurationManager.getConfigurationFor(aRequest);
+        FSFile theRootFolder = theConfiguration.getRootFolder();
+
         if (aLocator.isRootLocation()) {
-            return resourceFactory.createFolderResource(rootFile, aRequest.getDavSession(), this, aLocator);
+            return resourceFactory.createFolderResource(theRootFolder, aRequest.getDavSession(), this, aLocator);
         }
 
         String theResourcePath = aLocator.getResourcePath();
         if (theResourcePath.startsWith("/")) {
             theResourcePath = theResourcePath.substring(1);
         }
-        FSFile theReference = rootFile.asChild(theResourcePath);
+        FSFile theReference = theRootFolder.asChild(theResourcePath);
         if (theReference == null) {
             throw new DavException(DavServletResponse.SC_NOT_FOUND, "Not found : "+theResourcePath);
         }

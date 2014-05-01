@@ -5,9 +5,11 @@ import de.mirkosertic.easydav.fs.Deletable;
 import de.mirkosertic.easydav.fs.FSFile;
 import de.mirkosertic.easydav.fs.FileMovedEvent;
 import de.mirkosertic.easydav.fs.Renameable;
+import de.mirkosertic.easydav.fs.UserID;
 import de.mirkosertic.easydav.fs.Writeable;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.NotImplementedException;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.jackrabbit.server.io.IOUtil;
 import org.apache.jackrabbit.webdav.*;
 import org.apache.jackrabbit.webdav.io.InputContext;
@@ -15,6 +17,7 @@ import org.apache.jackrabbit.webdav.io.OutputContext;
 import org.apache.jackrabbit.webdav.lock.*;
 import org.apache.jackrabbit.webdav.property.*;
 
+import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -158,6 +161,14 @@ class FileDavResource implements DavResource {
         return theResponse;
     }
 
+    protected UserID currentUserID() {
+        String theUserID = ((DefaultDavSession)session).getCurrentUserID();
+        if (StringUtils.isEmpty(theUserID)) {
+            return UserID.ANONYMOUS;
+        }
+        return new UserID(theUserID);
+    }
+
     @Override
     public void move(DavResource aDestination) throws DavException {
         if (!(file instanceof Renameable)) {
@@ -174,7 +185,7 @@ class FileDavResource implements DavResource {
             throw new DavException(DavServletResponse.SC_FORBIDDEN);
         }
 
-        eventManager.fire(new FileMovedEvent(file, theFileResource.file));
+        eventManager.fire(new FileMovedEvent(currentUserID(), file, theFileResource.file));
     }
 
     @Override

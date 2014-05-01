@@ -1,24 +1,17 @@
 package de.mirkosertic.easydav.server;
 
-import java.io.File;
-
-import de.mirkosertic.easydav.fs.RootVirtualFolder;
-import de.mirkosertic.easydav.fs.vfs.VFSProxy;
+import de.mirkosertic.easydav.crawler.FileSystemCrawler;
+import de.mirkosertic.easydav.event.EventManager;
+import de.mirkosertic.easydav.fs.UserID;
 import de.mirkosertic.easydav.index.ContentExtractor;
 import de.mirkosertic.easydav.index.FulltextIndexer;
 import de.mirkosertic.easydav.script.ScriptManager;
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystemManager;
-import org.apache.commons.vfs2.VFS;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.resource.Resource;
 import org.eclipse.jetty.webapp.WebAppContext;
 
-import de.mirkosertic.easydav.crawler.FileSystemCrawler;
-import de.mirkosertic.easydav.event.EventManager;
-import de.mirkosertic.easydav.fs.VirtualFolder;
-import de.mirkosertic.easydav.fs.local.FileProxy;
+import java.io.File;
 
 public class EasyDavServer {
 
@@ -30,25 +23,14 @@ public class EasyDavServer {
         FulltextIndexer theIndexer = new FulltextIndexer(new File("C:\\Temp2"), theContentExtractor);
         theEventManager.register(theIndexer);
 
+        ConfigurationManager theManager = new ConfigurationManager();
+
         ScriptManager theScriptManager = new ScriptManager();
         theEventManager.register(theScriptManager);
 
-        RootVirtualFolder theRoot = new RootVirtualFolder();
-
-        FileProxy theTempFiles = new FileProxy(new File("c:\\Temp"), "Temporary Files");
-        FileProxy theNetworkData = new FileProxy(new File("U:\\"), "My network share");
-
-        theRoot.add(theTempFiles);
-        theRoot.add(theNetworkData);
-
-        FileSystemManager theFileSystemManager = VFS.getManager();
-        FileObject theZipFile = theFileSystemManager.resolveFile("jar:C:\\Temp\\migrationdir_001\\sourcedata\\ipgbdta001.zip");
-        VFSProxy theZipProxy = new VFSProxy(theZipFile, "VFSZip");
-        theRoot.add(theZipProxy);
-
         Server theWebDavServer = new Server(12000);
         EasyDavServletFactory theServletFactory = new EasyDavServletFactory();
-        EasyDavServlet theEasyDavServlet = theServletFactory.create(theRoot, theEventManager);
+        EasyDavServlet theEasyDavServlet = theServletFactory.create(theManager, theEventManager);
         WebAppContext theWebDavWebApp = new WebAppContext();
         theWebDavWebApp.setContextPath("/");
         theWebDavWebApp.setBaseResource(Resource.newClassPathResource("/webdavwebapp"));
@@ -69,7 +51,8 @@ public class EasyDavServer {
         theSearchServer.setHandler(theSearchWebApp);
         theSearchServer.start();
 
+        UserID theUserID = UserID.ANONYMOUS;
         FileSystemCrawler theCrawler = new FileSystemCrawler(theEventManager);
-        theCrawler.crawl(theRoot);
+        theCrawler.crawl(theUserID, theManager.getConfigurationFor(theUserID).getRootFolder());
     }
 }

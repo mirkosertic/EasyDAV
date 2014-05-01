@@ -8,4 +8,5 @@ interface IndexFields {
     String FILESIZE = "EasyDAV.filesize";
     String LASTMODIFIED = "EasyDAV.lastmodified";
     String META_PREFIX = "meta.";
+    String USERID = "EasyDAV.userid";
 }

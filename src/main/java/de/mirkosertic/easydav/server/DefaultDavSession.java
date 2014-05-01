@@ -18,6 +18,10 @@ class DefaultDavSession implements DavSession {
         servletRequest = aServletRequest;
     }
 
+    public String getCurrentUserID() {
+        return servletRequest.getRemoteUser();
+    }
+
     public boolean isPutRequest() {
         return "PUT".equals(servletRequest.getMethod());
     }

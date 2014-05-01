@@ -25,6 +25,8 @@ import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queries.mlt.MoreLikeThis;
+import org.apache.lucene.search.BooleanClause;
+import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
@@ -47,6 +49,7 @@ import de.mirkosertic.easydav.fs.FileCreatedOrUpdatedEvent;
 import de.mirkosertic.easydav.fs.FileDeletedEvent;
 import de.mirkosertic.easydav.fs.FileFoundEvent;
 import de.mirkosertic.easydav.fs.FileMovedEvent;
+import de.mirkosertic.easydav.fs.UserID;
 
 public class FulltextIndexer implements EventListener {
 
@@ -120,7 +123,7 @@ public class FulltextIndexer implements EventListener {
                 @Override
                 public void run() {
                     FileFoundEvent theEvent = (FileFoundEvent) aEvent;
-                    processFileFound(theEvent.getFile());
+                    processFileFound(theEvent.getUserId(), theEvent.getFile());
                 }
             });
         }
@@ -129,7 +132,7 @@ public class FulltextIndexer implements EventListener {
                 @Override
                 public void run() {
                     FileDeletedEvent theEvent = (FileDeletedEvent) aEvent;
-                    processFileDeleted(theEvent.getFile());
+                    processFileDeleted(theEvent.getUserId(), theEvent.getFile());
                 }
             });
         }
@@ -138,7 +141,7 @@ public class FulltextIndexer implements EventListener {
                 @Override
                 public void run() {
                     FileMovedEvent theEvent = (FileMovedEvent) aEvent;
-                    processFileMoved(theEvent.getSource(), theEvent.getDestination());
+                    processFileMoved(theEvent.getUserId(), theEvent.getSource(), theEvent.getDestination());
                 }
             });
         }
@@ -147,20 +150,20 @@ public class FulltextIndexer implements EventListener {
                 @Override
                 public void run() {
                     FileCreatedOrUpdatedEvent theEvent = (FileCreatedOrUpdatedEvent) aEvent;
-                    processFileCreatedOrUpdated(theEvent.getFile());
+                    processFileCreatedOrUpdated(theEvent.getUserId(), theEvent.getFile());
                 }
             });
         }
     }
 
-    private void processFileFound(FSFile aFile) {
+    private void processFileFound(UserID aUserID, FSFile aFile) {
         // This is called by the crawler
         if (!aFile.isDirectory()) {
             String theFileLocationID = aFile.toLocationID();
             try {
-                UpdateCheckResult theResult = checkIfModified(theFileLocationID, aFile.lastModified());
+                UpdateCheckResult theResult = checkIfModified(aUserID, theFileLocationID, aFile.lastModified());
                 if (theResult == UpdateCheckResult.UPDATED) {
-                    processFileCreatedOrUpdated(aFile);
+                    processFileCreatedOrUpdated(aUserID, aFile);
                 }
             } catch (IOException e) {
                 LOGGER.error("Error checking file modification for {}", theFileLocationID, e);
@@ -168,15 +171,17 @@ public class FulltextIndexer implements EventListener {
         }
     }
 
-    private void processFileDeleted(FSFile aFile) {
+    private void processFileDeleted(UserID aUserID, FSFile aFile) {
         String theFileLocationID = aFile.toLocationID();
         try {
             if (aFile.isDirectory()) {
-                indexWriter
-                        .deleteDocuments(new WildcardQuery(new Term(IndexFields.FILENAME, theFileLocationID + "/*")));
-                indexWriter.deleteDocuments(new TermQuery(new Term(IndexFields.FILENAME, theFileLocationID)));
+                indexWriter.deleteDocuments(createPartitionedQuery(aUserID, new WildcardQuery(new Term(
+                        IndexFields.FILENAME, theFileLocationID + "/*"))));
+                indexWriter.deleteDocuments(createPartitionedQuery(aUserID, new TermQuery(new Term(
+                        IndexFields.FILENAME, theFileLocationID))));
             } else {
-                indexWriter.deleteDocuments(new TermQuery(new Term(IndexFields.FILENAME, theFileLocationID)));
+                indexWriter.deleteDocuments(createPartitionedQuery(aUserID, new TermQuery(new Term(
+                        IndexFields.FILENAME, theFileLocationID))));
             }
 
             LOGGER.info("File {} removed from index", theFileLocationID);
@@ -185,21 +190,21 @@ public class FulltextIndexer implements EventListener {
         }
     }
 
-    private void processFileMoved(FSFile aSource, FSFile aDestination) {
-        processFileDeleted(aSource);
-        processFileCreatedOrUpdated(aDestination);
+    private void processFileMoved(UserID aUserID, FSFile aSource, FSFile aDestination) {
+        processFileDeleted(aUserID, aSource);
+        processFileCreatedOrUpdated(aUserID, aDestination);
     }
 
-    private void processFileCreatedOrUpdated(FSFile aFile) {
+    private void processFileCreatedOrUpdated(UserID aUserID, FSFile aFile) {
         // this is invoked during file manipulation
         if (contentExtractor.supportsFile(aFile)) {
             String theFileLocationID = aFile.toLocationID();
 
-            processFileDeleted(aFile);
+            processFileDeleted(aUserID, aFile);
             Content theContent = contentExtractor.extractContentFrom(aFile);
             if (theContent != null) {
                 try {
-                    addToIndex(theFileLocationID, theContent);
+                    addToIndex(aUserID, theFileLocationID, theContent);
 
                     LOGGER.info("File {} updated in index", theFileLocationID);
                 } catch (IOException e) {
@@ -211,11 +216,11 @@ public class FulltextIndexer implements EventListener {
         }
     }
 
-    private void addToIndex(String aLocationId, Content aContent) throws IOException {
+    private void addToIndex(UserID aUserId, String aLocationId, Content aContent) throws IOException {
         Document theDocument = new Document();
 
+        theDocument.add(new StringField(IndexFields.USERID, aUserId.getUserId(), Field.Store.YES));
         theDocument.add(new StringField(IndexFields.FILENAME, aLocationId, Field.Store.YES));
-
         theDocument.add(new TextField(IndexFields.CONTENT, aContent.getFileContent(), Field.Store.YES));
         theDocument.add(new LongField(IndexFields.FILESIZE, aContent.getFileSize(), Field.Store.YES));
         theDocument.add(new StringField(IndexFields.LASTMODIFIED, "" + aContent.getLastModified(), Field.Store.YES));
@@ -228,7 +233,7 @@ public class FulltextIndexer implements EventListener {
         indexWriter.updateDocument(new Term(IndexFields.FILENAME, aLocationId), theDocument);
     }
 
-    UpdateCheckResult checkIfModified(String aLocationId, long aLastModified) throws IOException {
+    UpdateCheckResult checkIfModified(UserID aUserID, String aLocationId, long aLastModified) throws IOException {
 
         IndexSearcher theSearcher = searcherManager.acquire();
         try {
@@ -254,11 +259,20 @@ public class FulltextIndexer implements EventListener {
         }
     }
 
-    public QueryResult performQuery(String aSearchString) throws IOException {
-        return performQuery(aSearchString, true, 100);
+    public QueryResult performQuery(UserID aUserID, String aSearchString) throws IOException {
+        return performQuery(aUserID, aSearchString, true, 100);
     }
 
-    public QueryResult performQuery(String aQueryString, boolean aIncludeSimilarDocuments, int aMaxDocs) throws IOException {
+    protected BooleanQuery createPartitionedQuery(UserID aUserID, Query aQuery) {
+        BooleanQuery theSearchQuery = new BooleanQuery();
+        theSearchQuery.add(new BooleanClause(new TermQuery(new Term(IndexFields.USERID, aUserID.getUserId())),
+                BooleanClause.Occur.MUST));
+        theSearchQuery.add(new BooleanClause(aQuery, BooleanClause.Occur.MUST));
+        return theSearchQuery;
+    }
+
+    public QueryResult performQuery(UserID aUserID, String aQueryString, boolean aIncludeSimilarDocuments, int aMaxDocs)
+            throws IOException {
 
         searcherManager.maybeRefreshBlocking();
         IndexSearcher theSearcher = searcherManager.acquire();
@@ -275,29 +289,33 @@ public class FulltextIndexer implements EventListener {
 
                 QueryParser theParser = new QueryParser();
 
-                Query theQuery = theParser.parse(aQueryString, IndexFields.CONTENT);
+                Query theSearchQuery = createPartitionedQuery(aUserID,
+                        theParser.parse(aQueryString, IndexFields.CONTENT));
 
                 MoreLikeThis theMoreLikeThis = new MoreLikeThis(theSearcher.getIndexReader());
                 theMoreLikeThis.setAnalyzer(analyzer);
                 theMoreLikeThis.setMinTermFreq(1);
                 theMoreLikeThis.setMinDocFreq(1);
-                theMoreLikeThis.setFieldNames(new String[]{IndexFields.CONTENT});
+                theMoreLikeThis.setFieldNames(new String[] { IndexFields.CONTENT });
 
-                TopDocs theDocs = theSearcher.search(theQuery, null, aMaxDocs);
+                TopDocs theDocs = theSearcher.search(theSearchQuery, null, aMaxDocs);
 
-                for (int i=0;i<theDocs.scoreDocs.length;i++) {
+                for (int i = 0; i < theDocs.scoreDocs.length; i++) {
                     ScoreDoc theScoreDoc = theDocs.scoreDocs[i];
                     Document theDocument = theSearcher.doc(theScoreDoc.doc);
 
                     String theFoundFileName = theDocument.getField(IndexFields.FILENAME).stringValue();
-                    Date theLastModified = new Date(Long.parseLong(theDocument.getField(IndexFields.LASTMODIFIED).stringValue()));
+                    Date theLastModified = new Date(Long.parseLong(theDocument.getField(IndexFields.LASTMODIFIED)
+                            .stringValue()));
 
                     String theOriginalContent = theDocument.getField(IndexFields.CONTENT).stringValue();
 
                     StringBuilder theHighlightedResult = new StringBuilder(theDateFormat.format(theLastModified));
                     theHighlightedResult.append("&nbsp;-&nbsp;");
-                    Highlighter theHighlighter = new Highlighter(new SimpleHTMLFormatter(), new QueryScorer(theQuery));
-                    for (String theFragment : theHighlighter.getBestFragments(analyzer, IndexFields.CONTENT, theOriginalContent, NUMBER_OF_FRAGMENTS)) {
+                    Highlighter theHighlighter = new Highlighter(new SimpleHTMLFormatter(), new QueryScorer(
+                            theSearchQuery));
+                    for (String theFragment : theHighlighter.getBestFragments(analyzer, IndexFields.CONTENT,
+                            theOriginalContent, NUMBER_OF_FRAGMENTS)) {
                         if (theHighlightedResult.length() > 0) {
                             theHighlightedResult = theHighlightedResult.append("...");
                         }
@@ -308,7 +326,9 @@ public class FulltextIndexer implements EventListener {
 
                     if (aIncludeSimilarDocuments) {
 
-                        Query theMoreLikeThisQuery = theMoreLikeThis.like(theDocs.scoreDocs[i].doc);
+                        Query theMoreLikeThisQuery = createPartitionedQuery(aUserID,
+                                theMoreLikeThis.like(theDocs.scoreDocs[i].doc));
+
                         TopDocs theMoreLikeThisTopDocs = theSearcher.search(theMoreLikeThisQuery, 5);
                         for (ScoreDoc theMoreLikeThisScoreDoc : theMoreLikeThisTopDocs.scoreDocs) {
                             Document theMoreLikeThisDocument = theSearcher.doc(theMoreLikeThisScoreDoc.doc);
@@ -322,11 +342,14 @@ public class FulltextIndexer implements EventListener {
                         }
                     }
 
-                    theResultDocuments.add(new QueryResultDocument(theFoundFileName, theHighlightedResult.toString(), Long.parseLong(theDocument.getField(IndexFields.LASTMODIFIED).stringValue()), theSimilarFiles));
+                    theResultDocuments.add(new QueryResultDocument(theFoundFileName, theHighlightedResult.toString(),
+                            Long.parseLong(theDocument.getField(IndexFields.LASTMODIFIED).stringValue()),
+                            theSimilarFiles));
                 }
             }
 
-            return new QueryResult(System.currentTimeMillis() - theStartTime, theResultDocuments, theSearcher.getIndexReader().numDocs());
+            return new QueryResult(System.currentTimeMillis() - theStartTime, theResultDocuments, theSearcher
+                    .getIndexReader().numDocs());
         } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {
