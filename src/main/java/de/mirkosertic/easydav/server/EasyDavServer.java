@@ -42,7 +42,7 @@ public class EasyDavServer {
 
         Server theSearchServer = new Server(12001);
         WebAppContext theSearchWebApp = new WebAppContext();
-        SearchServlet theSearchServlet = new SearchServlet(theIndexer);
+        SearchServlet theSearchServlet = new SearchServlet(theIndexer, theManager);
         theSearchWebApp.setContextPath("/");
         theSearchWebApp.setBaseResource(Resource.newClassPathResource("/searchwebapp"));
         theSearchWebApp.setDescriptor("WEB-INF/web.xml");

@@ -21,13 +21,6 @@ public interface FSFile {
 
     List<FSFile> listFiles();
 
-    default String toLocationID() {
-        if (parent() != null) {
-            return parent().toLocationID() + "/" + getName();
-        }
-        return getName();
-    }
-
     default FSFile asChild(String aResourcePath) {
         int p = aResourcePath.indexOf("/");
         if (p < 0) {

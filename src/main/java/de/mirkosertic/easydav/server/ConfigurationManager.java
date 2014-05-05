@@ -3,8 +3,8 @@ package de.mirkosertic.easydav.server;
 import de.mirkosertic.easydav.fs.FSFile;
 import de.mirkosertic.easydav.fs.RootVirtualFolder;
 import de.mirkosertic.easydav.fs.UserID;
-import de.mirkosertic.easydav.fs.local.FileProxy;
-import de.mirkosertic.easydav.fs.vfs.VFSProxy;
+import de.mirkosertic.easydav.fs.local.LocalFileMount;
+import de.mirkosertic.easydav.fs.vfs.VFSFileObjectMount;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
@@ -16,19 +16,19 @@ import java.io.File;
 
 public class ConfigurationManager {
 
-    private final FSFile root;
+    private final RootVirtualFolder root;
 
     public ConfigurationManager() throws FileSystemException {
         RootVirtualFolder theRoot = new RootVirtualFolder();
-        FileProxy theTempFiles = new FileProxy(new File("c:\\Temp"), "Temporary Files");
-        FileProxy theNetworkData = new FileProxy(new File("U:\\"), "My network share");
+        LocalFileMount theTempFiles = new LocalFileMount("localfile", new File("c:\\Temp"), "Temporary Files");
+        LocalFileMount theNetworkData = new LocalFileMount("network", new File("U:\\"), "My network share");
 
         theRoot.add(theTempFiles);
         theRoot.add(theNetworkData);
 
         FileSystemManager theFileSystemManager = VFS.getManager();
         FileObject theZipFile = theFileSystemManager.resolveFile("jar:C:\\Temp\\migrationdir_001\\sourcedata\\ipgbdta001.zip");
-        VFSProxy theZipProxy = new VFSProxy(theZipFile, "VFSZip");
+        VFSFileObjectMount theZipProxy = new VFSFileObjectMount("testdata001", theZipFile, "VFSZip");
         theRoot.add(theZipProxy);
 
         root = theRoot;

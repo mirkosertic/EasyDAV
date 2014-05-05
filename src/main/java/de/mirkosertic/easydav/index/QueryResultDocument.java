@@ -17,13 +17,13 @@ import java.util.List;
 
 public class QueryResultDocument {
 
-    private String fileName;
+    private final String fileName;
 
-    private String highlightedSearchResult;
+    private final String highlightedSearchResult;
 
-    private long lastModified;
+    private final long lastModified;
 
-    private List<String> similarFiles;
+    private final List<String> similarFiles;
 
     public QueryResultDocument(String fileName, String highlightedSearchResult, long lastModified, List<String> similarFiles) {
         this.fileName = fileName;

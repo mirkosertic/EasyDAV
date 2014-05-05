@@ -1,26 +1,24 @@
 package de.mirkosertic.easydav.fs.imap;
 
+import de.mirkosertic.easydav.fs.FSFile;
+import org.apache.commons.lang3.NotImplementedException;
+import org.apache.commons.lang3.StringUtils;
+
+import javax.mail.Folder;
+import javax.mail.Message;
+import javax.mail.MessagingException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.mail.Folder;
-import javax.mail.Message;
-import javax.mail.MessagingException;
-
-import org.apache.commons.lang3.NotImplementedException;
-import org.apache.commons.lang3.StringUtils;
-
-import de.mirkosertic.easydav.fs.FSFile;
-
-public class IMAPFolder implements FSFile {
+class IMAPFolder implements FSFile {
 
     private final String name;
     private final Folder folder;
     private FSFile parent;
 
-    private IMAPFolder(Folder aFolder) {
+    IMAPFolder(Folder aFolder) {
         this(aFolder.getName(), aFolder);
     }
 

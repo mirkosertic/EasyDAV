@@ -13,6 +13,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import de.mirkosertic.easydav.fs.RootVirtualFolder;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
@@ -49,6 +50,8 @@ import de.mirkosertic.easydav.fs.FileCreatedOrUpdatedEvent;
 import de.mirkosertic.easydav.fs.FileDeletedEvent;
 import de.mirkosertic.easydav.fs.FileFoundEvent;
 import de.mirkosertic.easydav.fs.FileMovedEvent;
+import de.mirkosertic.easydav.fs.Mount;
+import de.mirkosertic.easydav.fs.MountInfo;
 import de.mirkosertic.easydav.fs.UserID;
 
 public class FulltextIndexer implements EventListener {
@@ -123,7 +126,7 @@ public class FulltextIndexer implements EventListener {
                 @Override
                 public void run() {
                     FileFoundEvent theEvent = (FileFoundEvent) aEvent;
-                    processFileFound(theEvent.getUserId(), theEvent.getFile());
+                    processFileFound(theEvent.getFile());
                 }
             });
         }
@@ -132,7 +135,7 @@ public class FulltextIndexer implements EventListener {
                 @Override
                 public void run() {
                     FileDeletedEvent theEvent = (FileDeletedEvent) aEvent;
-                    processFileDeleted(theEvent.getUserId(), theEvent.getFile());
+                    processFileDeleted(theEvent.getFile());
                 }
             });
         }
@@ -141,7 +144,7 @@ public class FulltextIndexer implements EventListener {
                 @Override
                 public void run() {
                     FileMovedEvent theEvent = (FileMovedEvent) aEvent;
-                    processFileMoved(theEvent.getUserId(), theEvent.getSource(), theEvent.getDestination());
+                    processFileMoved(theEvent.getSource(), theEvent.getDestination());
                 }
             });
         }
@@ -150,38 +153,55 @@ public class FulltextIndexer implements EventListener {
                 @Override
                 public void run() {
                     FileCreatedOrUpdatedEvent theEvent = (FileCreatedOrUpdatedEvent) aEvent;
-                    processFileCreatedOrUpdated(theEvent.getUserId(), theEvent.getFile());
+                    processFileCreatedOrUpdated(theEvent.getFile());
                 }
             });
         }
     }
 
-    private void processFileFound(UserID aUserID, FSFile aFile) {
+    private void processFileFound(FSFile aFile) {
         // This is called by the crawler
         if (!aFile.isDirectory()) {
-            String theFileLocationID = aFile.toLocationID();
             try {
-                UpdateCheckResult theResult = checkIfModified(aUserID, theFileLocationID, aFile.lastModified());
+                UpdateCheckResult theResult = checkIfModified(aFile, aFile.lastModified());
                 if (theResult == UpdateCheckResult.UPDATED) {
-                    processFileCreatedOrUpdated(aUserID, aFile);
+                    processFileCreatedOrUpdated(aFile);
                 }
             } catch (IOException e) {
-                LOGGER.error("Error checking file modification for {}", theFileLocationID, e);
+                LOGGER.error("Error checking file modification for {}", aFile.getName(), e);
             }
         }
     }
 
-    private void processFileDeleted(UserID aUserID, FSFile aFile) {
-        String theFileLocationID = aFile.toLocationID();
+    private void processFileDeleted(FSFile aFile) {
+        String theFileLocationID = locationID(aFile);
         try {
+
+            MountInfo theMountInfo = mountInfo(aFile);
+
             if (aFile.isDirectory()) {
-                indexWriter.deleteDocuments(createPartitionedQuery(aUserID, new WildcardQuery(new Term(
-                        IndexFields.FILENAME, theFileLocationID + "/*"))));
-                indexWriter.deleteDocuments(createPartitionedQuery(aUserID, new TermQuery(new Term(
-                        IndexFields.FILENAME, theFileLocationID))));
+
+                BooleanQuery theQuery = new BooleanQuery();
+                theQuery.add(new TermQuery(new Term(IndexFields.MOUNTID, theMountInfo.getUniqueId())),
+                        BooleanClause.Occur.MUST);
+                theQuery.add(new WildcardQuery(new Term(IndexFields.FILENAME, theFileLocationID + "/*")),
+                        BooleanClause.Occur.MUST);
+
+                indexWriter.deleteDocuments(theQuery);
+
+                theQuery = new BooleanQuery();
+                theQuery.add(new TermQuery(new Term(IndexFields.MOUNTID, theMountInfo.getUniqueId())),
+                        BooleanClause.Occur.MUST);
+                theQuery.add(new TermQuery(new Term(IndexFields.FILENAME, theFileLocationID)), BooleanClause.Occur.MUST);
+
+                indexWriter.deleteDocuments(theQuery);
             } else {
-                indexWriter.deleteDocuments(createPartitionedQuery(aUserID, new TermQuery(new Term(
-                        IndexFields.FILENAME, theFileLocationID))));
+                BooleanQuery theQuery = new BooleanQuery();
+                theQuery.add(new TermQuery(new Term(IndexFields.MOUNTID, theMountInfo.getUniqueId())),
+                        BooleanClause.Occur.MUST);
+                theQuery.add(new TermQuery(new Term(IndexFields.FILENAME, theFileLocationID)), BooleanClause.Occur.MUST);
+
+                indexWriter.deleteDocuments(theQuery);
             }
 
             LOGGER.info("File {} removed from index", theFileLocationID);
@@ -190,21 +210,21 @@ public class FulltextIndexer implements EventListener {
         }
     }
 
-    private void processFileMoved(UserID aUserID, FSFile aSource, FSFile aDestination) {
-        processFileDeleted(aUserID, aSource);
-        processFileCreatedOrUpdated(aUserID, aDestination);
+    private void processFileMoved(FSFile aSource, FSFile aDestination) {
+        processFileDeleted(aSource);
+        processFileCreatedOrUpdated(aDestination);
     }
 
-    private void processFileCreatedOrUpdated(UserID aUserID, FSFile aFile) {
+    private void processFileCreatedOrUpdated(FSFile aFile) {
         // this is invoked during file manipulation
         if (contentExtractor.supportsFile(aFile)) {
-            String theFileLocationID = aFile.toLocationID();
+            String theFileLocationID = locationID(aFile);
 
-            processFileDeleted(aUserID, aFile);
+            processFileDeleted(aFile);
             Content theContent = contentExtractor.extractContentFrom(aFile);
             if (theContent != null) {
                 try {
-                    addToIndex(aUserID, theFileLocationID, theContent);
+                    addToIndex(mountInfo(aFile), theFileLocationID, theContent);
 
                     LOGGER.info("File {} updated in index", theFileLocationID);
                 } catch (IOException e) {
@@ -216,10 +236,10 @@ public class FulltextIndexer implements EventListener {
         }
     }
 
-    private void addToIndex(UserID aUserId, String aLocationId, Content aContent) throws IOException {
+    private void addToIndex(MountInfo aMountInfo, String aLocationId, Content aContent) throws IOException {
         Document theDocument = new Document();
 
-        theDocument.add(new StringField(IndexFields.USERID, aUserId.getUserId(), Field.Store.YES));
+        theDocument.add(new StringField(IndexFields.MOUNTID, aMountInfo.getUniqueId(), Field.Store.YES));
         theDocument.add(new StringField(IndexFields.FILENAME, aLocationId, Field.Store.YES));
         theDocument.add(new TextField(IndexFields.CONTENT, aContent.getFileContent(), Field.Store.YES));
         theDocument.add(new LongField(IndexFields.FILESIZE, aContent.getFileSize(), Field.Store.YES));
@@ -233,11 +253,15 @@ public class FulltextIndexer implements EventListener {
         indexWriter.updateDocument(new Term(IndexFields.FILENAME, aLocationId), theDocument);
     }
 
-    UpdateCheckResult checkIfModified(UserID aUserID, String aLocationId, long aLastModified) throws IOException {
+    UpdateCheckResult checkIfModified(FSFile aFile, long aLastModified) throws IOException {
 
         IndexSearcher theSearcher = searcherManager.acquire();
         try {
-            Query theQuery = new TermQuery(new Term(IndexFields.FILENAME, aLocationId));
+
+            BooleanQuery theQuery = new BooleanQuery();
+            theQuery.add(new TermQuery(new Term(IndexFields.FILENAME, locationID(aFile))), BooleanClause.Occur.MUST);
+            theQuery.add(new TermQuery(new Term(IndexFields.MOUNTID, mountInfo(aFile).getUniqueId())), BooleanClause.Occur.MUST);
+
             TopDocs theDocs = theSearcher.search(theQuery, null, 100);
             if (theDocs.scoreDocs.length == 0) {
                 return UpdateCheckResult.UPDATED;
@@ -259,19 +283,33 @@ public class FulltextIndexer implements EventListener {
         }
     }
 
-    public QueryResult performQuery(UserID aUserID, String aSearchString) throws IOException {
-        return performQuery(aUserID, aSearchString, true, 100);
+    public QueryResult performQuery(RootVirtualFolder aRootFolder, String aSearchString) throws IOException {
+        return performQuery(aRootFolder, aSearchString, true, 100);
     }
 
-    protected BooleanQuery createPartitionedQuery(UserID aUserID, Query aQuery) {
-        BooleanQuery theSearchQuery = new BooleanQuery();
-        theSearchQuery.add(new BooleanClause(new TermQuery(new Term(IndexFields.USERID, aUserID.getUserId())),
-                BooleanClause.Occur.MUST));
-        theSearchQuery.add(new BooleanClause(aQuery, BooleanClause.Occur.MUST));
-        return theSearchQuery;
+    private MountInfo mountInfo(FSFile aFile) {
+        if (aFile instanceof Mount) {
+            return ((Mount) aFile).getMountInfo();
+        }
+        FSFile aParent = aFile.parent();
+        if (aParent != null) {
+            return mountInfo(aParent);
+        }
+        return null;
     }
 
-    public QueryResult performQuery(UserID aUserID, String aQueryString, boolean aIncludeSimilarDocuments, int aMaxDocs)
+    private String locationID(FSFile aFile) {
+        if (aFile instanceof Mount) {
+            return "";
+        }
+        FSFile aParent = aFile.parent();
+        if (aParent != null) {
+            return locationID(aParent) + "/" + aFile.getName();
+        }
+        return aFile.getName();
+    }
+
+    public QueryResult performQuery(RootVirtualFolder aRootFolder, String aQueryString, boolean aIncludeSimilarDocuments, int aMaxDocs)
             throws IOException {
 
         searcherManager.maybeRefreshBlocking();
@@ -289,8 +327,7 @@ public class FulltextIndexer implements EventListener {
 
                 QueryParser theParser = new QueryParser();
 
-                Query theSearchQuery = createPartitionedQuery(aUserID,
-                        theParser.parse(aQueryString, IndexFields.CONTENT));
+                Query theSearchQuery = theParser.parse(aQueryString, IndexFields.CONTENT);
 
                 MoreLikeThis theMoreLikeThis = new MoreLikeThis(theSearcher.getIndexReader());
                 theMoreLikeThis.setAnalyzer(analyzer);
@@ -303,6 +340,12 @@ public class FulltextIndexer implements EventListener {
                 for (int i = 0; i < theDocs.scoreDocs.length; i++) {
                     ScoreDoc theScoreDoc = theDocs.scoreDocs[i];
                     Document theDocument = theSearcher.doc(theScoreDoc.doc);
+
+                    String theMountID = theDocument.get(IndexFields.MOUNTID);
+                    Mount[] theFoundMounts = aRootFolder.findMountById(theMountID);
+                    if (theFoundMounts == null) {
+                        continue;
+                    }
 
                     String theFoundFileName = theDocument.getField(IndexFields.FILENAME).stringValue();
                     Date theLastModified = new Date(Long.parseLong(theDocument.getField(IndexFields.LASTMODIFIED)
@@ -326,8 +369,7 @@ public class FulltextIndexer implements EventListener {
 
                     if (aIncludeSimilarDocuments) {
 
-                        Query theMoreLikeThisQuery = createPartitionedQuery(aUserID,
-                                theMoreLikeThis.like(theDocs.scoreDocs[i].doc));
+                        Query theMoreLikeThisQuery = theMoreLikeThis.like(theDocs.scoreDocs[i].doc);
 
                         TopDocs theMoreLikeThisTopDocs = theSearcher.search(theMoreLikeThisQuery, 5);
                         for (ScoreDoc theMoreLikeThisScoreDoc : theMoreLikeThisTopDocs.scoreDocs) {

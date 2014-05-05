@@ -16,9 +16,9 @@ import java.util.List;
 
 public class QueryResult {
 
-    private long elapsedTime;
-    private List<QueryResultDocument> documents;
-    private long totalDocuments;
+    private final long elapsedTime;
+    private final List<QueryResultDocument> documents;
+    private final long totalDocuments;
 
     public QueryResult(long elapsedTime, List<QueryResultDocument> documents, long totalDocuments) {
         this.elapsedTime = elapsedTime;

@@ -15,10 +15,12 @@ import de.mirkosertic.easydav.index.FulltextIndexer;
 
 public class SearchServlet extends HttpServlet {
 
-    private FulltextIndexer indexer;
+    private final FulltextIndexer indexer;
+    private final ConfigurationManager configurationManager;
 
-    public SearchServlet(FulltextIndexer aIndexer) {
+    public SearchServlet(FulltextIndexer aIndexer, ConfigurationManager aConfigurationManager) {
         indexer = aIndexer;
+        configurationManager = aConfigurationManager;
     }
 
     @Override
@@ -32,18 +34,12 @@ public class SearchServlet extends HttpServlet {
     protected void doPost(HttpServletRequest aRequest, HttpServletResponse aResponse) throws ServletException,
             IOException {
 
-        UserID theUser;
-        String theUserID = aRequest.getRemoteUser();
-        if (StringUtils.isEmpty(theUserID)) {
-            theUser = UserID.ANONYMOUS;
-        } else {
-            theUser = new UserID(theUserID);
-        }
+        Configuration theConfiguration = configurationManager.getConfigurationFor(aRequest);
 
         String theSearchString = aRequest.getParameter("querystring");
         if (!StringUtils.isEmpty(theSearchString)) {
             try {
-                aRequest.setAttribute("queryResult", indexer.performQuery(theUser, theSearchString));
+                aRequest.setAttribute("queryResult", indexer.performQuery(theConfiguration.getRootFolder(), theSearchString));
             } catch (Exception e) {
                 e.printStackTrace();
             }

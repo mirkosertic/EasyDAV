@@ -38,10 +38,10 @@ public class ScriptManager implements EventListener {
         if (!undefinedHandlers.contains(theHandlerName)) {
             Invocable theInvokeable = (Invocable) scriptEngine;
             try {
-                theInvokeable.invokeFunction("on"+aEvent.getClass().getSimpleName(), aEvent);
+                theInvokeable.invokeFunction(theHandlerName, aEvent);
             } catch (NoSuchMethodException e) {
                 // No method found for invocation
-                // So no eventhandlet is defined
+                // So no eventhandler is defined
                 undefinedHandlers.add(theHandlerName);
 
             } catch (ScriptException e) {

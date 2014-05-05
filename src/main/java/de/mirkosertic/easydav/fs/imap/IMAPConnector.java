@@ -14,7 +14,7 @@ public class IMAPConnector {
         store = aStore;
     }
 
-    public IMAPFolder createRootFolder(String aName) throws MessagingException {
-        return new IMAPFolder(aName, store.getDefaultFolder());
+    public IMAPFolderMount createRootFolder(String aUniqueId, String aName) throws MessagingException {
+        return new IMAPFolderMount(aUniqueId, aName, store.getDefaultFolder());
     }
 }

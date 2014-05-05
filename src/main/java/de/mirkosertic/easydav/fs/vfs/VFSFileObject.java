@@ -1,27 +1,26 @@
 package de.mirkosertic.easydav.fs.vfs;
 
+import de.mirkosertic.easydav.fs.FSFile;
+import org.apache.commons.vfs2.FileObject;
+import org.apache.commons.vfs2.FileSystemException;
+import org.apache.commons.vfs2.FileType;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystemException;
-import org.apache.commons.vfs2.FileType;
-
-import de.mirkosertic.easydav.fs.FSFile;
-
-public class VFSProxy implements FSFile {
+class VFSFileObject implements FSFile {
 
     private final FileObject fileObject;
     private FSFile parent;
     private final String name;
 
-    private VFSProxy(FileObject aFileObject) {
+    VFSFileObject(FileObject aFileObject) {
         this(aFileObject, aFileObject.getName().getBaseName());
     }
 
-    public VFSProxy(FileObject aFileObject, String aName) {
+    VFSFileObject(FileObject aFileObject, String aName) {
         fileObject = aFileObject;
         name = aName;
     }
@@ -87,7 +86,7 @@ public class VFSProxy implements FSFile {
         List<FSFile> theResult = new ArrayList<>();
         try {
             for (FileObject theChild : fileObject.getChildren()) {
-                VFSProxy theChildProxy = new VFSProxy(theChild);
+                VFSFileObject theChildProxy = new VFSFileObject(theChild);
                 theChildProxy.setParent(this);
                 theResult.add(theChildProxy);
             }

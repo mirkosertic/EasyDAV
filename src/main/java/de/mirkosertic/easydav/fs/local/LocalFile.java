@@ -1,27 +1,33 @@
 package de.mirkosertic.easydav.fs.local;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.NotImplementedException;
+
 import de.mirkosertic.easydav.fs.Deletable;
 import de.mirkosertic.easydav.fs.FSFile;
 import de.mirkosertic.easydav.fs.Renameable;
 import de.mirkosertic.easydav.fs.Writeable;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.NotImplementedException;
 
-import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
-
-public class FileProxy implements FSFile, Deletable, Renameable, Writeable {
+class LocalFile implements FSFile, Deletable, Renameable, Writeable {
 
     private final String displayName;
     private final File file;
-    private FSFile parent;
+    FSFile parent;
 
-    private FileProxy(File aFile) {
+    LocalFile(File aFile) {
         this(aFile, aFile.getName());
     }
 
-    public FileProxy(File aFile, String aDisplayName) {
+    LocalFile(File aFile, String aDisplayName) {
         displayName = aDisplayName;
         file = aFile;
     }
@@ -68,10 +74,10 @@ public class FileProxy implements FSFile, Deletable, Renameable, Writeable {
 
     @Override
     public boolean renameTo(FSFile aNewFileName) {
-        if (!(aNewFileName instanceof FileProxy)) {
+        if (!(aNewFileName instanceof LocalFile)) {
             throw new NotImplementedException("Can only rename FileProxies to other FileProxies");
         }
-        return file.renameTo(((FileProxy) aNewFileName).file);
+        return file.renameTo(((LocalFile) aNewFileName).file);
     }
 
     @Override
@@ -88,7 +94,7 @@ public class FileProxy implements FSFile, Deletable, Renameable, Writeable {
     public List<FSFile> listFiles() {
         List<FSFile> theFiles = new ArrayList<>();
         for (File theFile : file.listFiles()) {
-            FileProxy theProxy = new FileProxy(theFile);
+            LocalFile theProxy = new LocalFile(theFile);
             theProxy.setParent(this);
             theFiles.add(theProxy);
         }
@@ -97,7 +103,7 @@ public class FileProxy implements FSFile, Deletable, Renameable, Writeable {
 
     @Override
     public FSFile asChild(String aResourcePath) {
-        FileProxy theProxy = new FileProxy(new File(file, aResourcePath));
+        LocalFile theProxy = new LocalFile(new File(file, aResourcePath));
         theProxy.setParent(this);
         return theProxy;
     }

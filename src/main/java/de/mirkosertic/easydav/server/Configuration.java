@@ -1,16 +1,16 @@
 package de.mirkosertic.easydav.server;
 
-import de.mirkosertic.easydav.fs.FSFile;
+import de.mirkosertic.easydav.fs.RootVirtualFolder;
 
 public class Configuration {
 
-    private final FSFile rootFolder;
+    private final RootVirtualFolder rootFolder;
 
-    Configuration(FSFile aRootFolder) {
+    Configuration(RootVirtualFolder aRootFolder) {
         rootFolder = aRootFolder;
     }
 
-    public FSFile getRootFolder() {
+    public RootVirtualFolder getRootFolder() {
         return rootFolder;
     }
 }
