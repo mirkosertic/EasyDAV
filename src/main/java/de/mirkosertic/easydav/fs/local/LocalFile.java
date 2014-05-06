@@ -9,11 +9,15 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
+import de.mirkosertic.easydav.fs.FileMovedEvent;
+import de.mirkosertic.easydav.fs.FolderCreatedEvent;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.NotImplementedException;
 
+import de.mirkosertic.easydav.event.EventManager;
 import de.mirkosertic.easydav.fs.Deletable;
 import de.mirkosertic.easydav.fs.FSFile;
+import de.mirkosertic.easydav.fs.FileDeletedEvent;
 import de.mirkosertic.easydav.fs.Renameable;
 import de.mirkosertic.easydav.fs.Writeable;
 
@@ -21,15 +25,17 @@ class LocalFile implements FSFile, Deletable, Renameable, Writeable {
 
     private final String displayName;
     private final File file;
+    private final EventManager eventManager;
     FSFile parent;
 
-    LocalFile(File aFile) {
-        this(aFile, aFile.getName());
+    LocalFile(EventManager aEventManager, File aFile) {
+        this(aEventManager, aFile, aFile.getName());
     }
 
-    LocalFile(File aFile, String aDisplayName) {
+    LocalFile(EventManager aEventManager, File aFile, String aDisplayName) {
         displayName = aDisplayName;
         file = aFile;
+        eventManager = aEventManager;
     }
 
     @Override
@@ -54,12 +60,16 @@ class LocalFile implements FSFile, Deletable, Renameable, Writeable {
 
     @Override
     public void mkdirs() {
-        file.mkdirs();
+        if (file.mkdirs()) {
+            eventManager.fire(new FolderCreatedEvent(this));
+        }
     }
 
     @Override
     public void delete() throws IOException {
         FileUtils.forceDelete(file);
+
+        eventManager.fire(new FileDeletedEvent(this));
     }
 
     @Override
@@ -77,7 +87,12 @@ class LocalFile implements FSFile, Deletable, Renameable, Writeable {
         if (!(aNewFileName instanceof LocalFile)) {
             throw new NotImplementedException("Can only rename FileProxies to other FileProxies");
         }
-        return file.renameTo(((LocalFile) aNewFileName).file);
+        LocalFile theLocalFile = (LocalFile) aNewFileName;
+        if (file.renameTo(theLocalFile.file)) {
+            eventManager.fire(new FileMovedEvent(this, theLocalFile));
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -94,7 +109,7 @@ class LocalFile implements FSFile, Deletable, Renameable, Writeable {
     public List<FSFile> listFiles() {
         List<FSFile> theFiles = new ArrayList<>();
         for (File theFile : file.listFiles()) {
-            LocalFile theProxy = new LocalFile(theFile);
+            LocalFile theProxy = new LocalFile(eventManager, theFile);
             theProxy.setParent(this);
             theFiles.add(theProxy);
         }
@@ -103,7 +118,7 @@ class LocalFile implements FSFile, Deletable, Renameable, Writeable {
 
     @Override
     public FSFile asChild(String aResourcePath) {
-        LocalFile theProxy = new LocalFile(new File(file, aResourcePath));
+        LocalFile theProxy = new LocalFile(eventManager, new File(file, aResourcePath));
         theProxy.setParent(this);
         return theProxy;
     }

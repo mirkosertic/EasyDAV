@@ -24,8 +24,6 @@ import de.mirkosertic.easydav.event.EventManager;
 import de.mirkosertic.easydav.fs.Deletable;
 import de.mirkosertic.easydav.fs.FSFile;
 import de.mirkosertic.easydav.fs.FileCreatedOrUpdatedEvent;
-import de.mirkosertic.easydav.fs.FileDeletedEvent;
-import de.mirkosertic.easydav.fs.FolderCreatedEvent;
 
 public class FolderDavResource extends FileDavResource {
 
@@ -50,7 +48,7 @@ public class FolderDavResource extends FileDavResource {
                     // Normal file upload
                     IOUtils.copyLarge(aInputContext.getInputStream(), theStream);
                 }
-                eventManager.fire(new FileCreatedOrUpdatedEvent(currentUserID(), theFileResource.file));
+                eventManager.fire(new FileCreatedOrUpdatedEvent(theFileResource.file));
             } catch (Exception e) {
                 throw new DavException(DavServletResponse.SC_INTERNAL_SERVER_ERROR, e);
             }
@@ -58,8 +56,6 @@ public class FolderDavResource extends FileDavResource {
             // MKCols Request
             try {
                 theFileResource.createNewEmptyCollection();
-
-                eventManager.fire(new FolderCreatedEvent(currentUserID(), theFileResource.file));
             } catch (Exception e) {
                 throw new DavException(DavServletResponse.SC_INTERNAL_SERVER_ERROR, e);
             }
@@ -121,8 +117,6 @@ public class FolderDavResource extends FileDavResource {
         try {
             Deletable theDeletable = (Deletable) theFileResource.file;
             theDeletable.delete();
-
-            eventManager.fire(new FileDeletedEvent(currentUserID(), file));
         } catch (IOException e) {
             throw new DavException(DavServletResponse.SC_FORBIDDEN, e);
         }

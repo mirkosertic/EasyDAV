@@ -122,39 +122,27 @@ public class FulltextIndexer implements EventListener {
     @Override
     public void handle(final Event aEvent) {
         if (aEvent instanceof FileFoundEvent) {
-            executorPool.submit(new Runnable() {
-                @Override
-                public void run() {
-                    FileFoundEvent theEvent = (FileFoundEvent) aEvent;
-                    processFileFound(theEvent.getFile());
-                }
+            executorPool.submit(() -> {
+                FileFoundEvent theEvent = (FileFoundEvent) aEvent;
+                processFileFound(theEvent.getFile());
             });
         }
         if (aEvent instanceof FileDeletedEvent) {
-            executorPool.submit(new Runnable() {
-                @Override
-                public void run() {
-                    FileDeletedEvent theEvent = (FileDeletedEvent) aEvent;
-                    processFileDeleted(theEvent.getFile());
-                }
+            executorPool.submit(() -> {
+                FileDeletedEvent theEvent = (FileDeletedEvent) aEvent;
+                processFileDeleted(theEvent.getFile());
             });
         }
         if (aEvent instanceof FileMovedEvent) {
-            executorPool.submit(new Runnable() {
-                @Override
-                public void run() {
-                    FileMovedEvent theEvent = (FileMovedEvent) aEvent;
-                    processFileMoved(theEvent.getSource(), theEvent.getDestination());
-                }
+            executorPool.submit(() -> {
+                FileMovedEvent theEvent = (FileMovedEvent) aEvent;
+                processFileMoved(theEvent.getSource(), theEvent.getDestination());
             });
         }
         if (aEvent instanceof FileCreatedOrUpdatedEvent) {
-            executorPool.submit(new Runnable() {
-                @Override
-                public void run() {
-                    FileCreatedOrUpdatedEvent theEvent = (FileCreatedOrUpdatedEvent) aEvent;
-                    processFileCreatedOrUpdated(theEvent.getFile());
-                }
+            executorPool.submit(() -> {
+                FileCreatedOrUpdatedEvent theEvent = (FileCreatedOrUpdatedEvent) aEvent;
+                processFileCreatedOrUpdated(theEvent.getFile());
             });
         }
     }
