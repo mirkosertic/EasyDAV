@@ -161,14 +161,6 @@ class FileDavResource implements DavResource {
         return theResponse;
     }
 
-    protected UserID currentUserID() {
-        String theUserID = ((DefaultDavSession)session).getCurrentUserID();
-        if (StringUtils.isEmpty(theUserID)) {
-            return UserID.ANONYMOUS;
-        }
-        return new UserID(theUserID);
-    }
-
     @Override
     public void move(DavResource aDestination) throws DavException {
         if (!(file instanceof Renameable)) {
@@ -184,8 +176,6 @@ class FileDavResource implements DavResource {
         if (!theRenameable.renameTo(theFileResource.file)) {
             throw new DavException(DavServletResponse.SC_FORBIDDEN);
         }
-
-        eventManager.fire(new FileMovedEvent(currentUserID(), file, theFileResource.file));
     }
 
     @Override

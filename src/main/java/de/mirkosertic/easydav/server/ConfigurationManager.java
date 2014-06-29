@@ -1,5 +1,6 @@
 package de.mirkosertic.easydav.server;
 
+import de.mirkosertic.easydav.event.EventManager;
 import de.mirkosertic.easydav.fs.FSFile;
 import de.mirkosertic.easydav.fs.RootVirtualFolder;
 import de.mirkosertic.easydav.fs.UserID;
@@ -18,10 +19,10 @@ public class ConfigurationManager {
 
     private final RootVirtualFolder root;
 
-    public ConfigurationManager() throws FileSystemException {
+    public ConfigurationManager(EventManager aEventManager) throws FileSystemException {
         RootVirtualFolder theRoot = new RootVirtualFolder();
-        LocalFileMount theTempFiles = new LocalFileMount("localfile", new File("c:\\Temp"), "Temporary Files");
-        LocalFileMount theNetworkData = new LocalFileMount("network", new File("U:\\"), "My network share");
+        LocalFileMount theTempFiles = new LocalFileMount(aEventManager, "localfile", new File("c:\\Temp"), "Temporary Files");
+        LocalFileMount theNetworkData = new LocalFileMount(aEventManager, "network", new File("U:\\"), "My network share");
 
         theRoot.add(theTempFiles);
         theRoot.add(theNetworkData);

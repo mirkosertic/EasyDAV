@@ -6,7 +6,6 @@ import org.slf4j.LoggerFactory;
 import de.mirkosertic.easydav.event.EventManager;
 import de.mirkosertic.easydav.fs.FSFile;
 import de.mirkosertic.easydav.fs.FileFoundEvent;
-import de.mirkosertic.easydav.fs.UserID;
 
 public class FileSystemCrawler {
 
@@ -18,12 +17,12 @@ public class FileSystemCrawler {
         eventManager = aEventManager;
     }
 
-    public void crawl(UserID aUserID, FSFile aFile) {
+    public void crawl(FSFile aFile) {
         LOGGER.debug("Found file {}", aFile.getName());
-        eventManager.fire(new FileFoundEvent(aUserID, aFile));
+        eventManager.fire(new FileFoundEvent(aFile));
         if (aFile.isDirectory()) {
             for (FSFile theFile : aFile.listFiles()) {
-                crawl(aUserID, theFile);
+                crawl(theFile);
             }
         }
     }

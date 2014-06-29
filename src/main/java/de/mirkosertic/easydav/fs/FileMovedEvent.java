@@ -4,12 +4,10 @@ import de.mirkosertic.easydav.event.Event;
 
 public class FileMovedEvent implements Event {
 
-    private final UserID userId;
     private final FSFile source;
     private final FSFile destination;
 
-    public FileMovedEvent(UserID aUserID, FSFile aFile, FSFile aDestination) {
-        userId = aUserID;
+    public FileMovedEvent(FSFile aFile, FSFile aDestination) {
         source = aFile;
         destination = aDestination;
     }
@@ -20,10 +18,5 @@ public class FileMovedEvent implements Event {
 
     public FSFile getDestination() {
         return destination;
-    }
-
-    @Override
-    public UserID getUserId() {
-        return userId;
     }
 }
